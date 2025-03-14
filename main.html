@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フレアゲージ計算</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .container { width: 80%; margin: auto; }
+        .input-group {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .input-group label {
+            width: 120px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        .input-group input {
+            width: 60px;
+            text-align: center;
+        }
+        .chart-container { width: 80%; margin: auto; }
+        #result {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+        }
+        .result-box {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>ゲージ減少計算ツール</h2>
+        <div id="inputs">
+            <!-- ユーザー入力欄 -->
+            <div class="input-group">
+                <label>PERFECTの数:</label> <input type="number" id="perfect" value="0">
+            </div>
+            <div class="input-group">
+                <label>GREATの数:</label> <input type="number" id="great" value="0">
+            </div>
+            <div class="input-group">
+                <label>GOODの数:</label> <input type="number" id="good" value="0">
+            </div>
+            <div class="input-group">
+                <label>MISSの数:</label> <input type="number" id="miss" value="0">
+            </div>
+            <button onclick="calculateReduction()">計算</button>
+        </div>
+        <h3>結果</h3>
+        <div id="result"></div>
+        <div class="chart-container">
+            <canvas id="gaugeChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // ゲージの減少率を定義
+        const reductionRates = {
+            "FLARE I":    { "PERFECT": 0, "GREAT": 0.1,  "GOOD": 0.5,  "MISS": 1.5 },
+            "FLARE II":   { "PERFECT": 0, "GREAT": 0.1,  "GOOD": 0.63, "MISS": 3   },
+            "FLARE III":  { "PERFECT": 0, "GREAT": 0.1,  "GOOD": 0.75, "MISS": 4.5 },
+            "FLARE IV":   { "PERFECT": 0, "GREAT": 0.29, "GOOD": 1.45, "MISS": 11  },
+            "FLARE V":    { "PERFECT": 0, "GREAT": 0.74, "GOOD": 3.7,  "MISS": 16  },
+            "FLARE VI":   { "PERFECT": 0, "GREAT": 0.92, "GOOD": 4.6,  "MISS": 18  },
+            "FLARE VII":  { "PERFECT": 0, "GREAT": 1.28, "GOOD": 6.4,  "MISS": 22  },
+            "FLARE VIII": { "PERFECT": 0, "GREAT": 1.64, "GOOD": 8.2,  "MISS": 26  },
+            "FLARE IX":   { "PERFECT": 0, "GREAT": 2,    "GOOD": 10,   "MISS": 30  },
+            "FLARE EX":   { "PERFECT": 1, "GREAT": 2,    "GOOD": 10,   "MISS": 30  }
+        };
+
+        let myChart;
+
+        function calculateReduction() {
+            const ctx = document.getElementById("gaugeChart").getContext("2d");
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "";
+
+            // 入力値を取得し、数値化
+            const perfectVal = parseFloat(document.getElementById("perfect").value) || 0;
+            const greatVal   = parseFloat(document.getElementById("great").value)   || 0;
+            const goodVal    = parseFloat(document.getElementById("good").value)    || 0;
+            const missVal    = parseFloat(document.getElementById("miss").value)    || 0;
+
+            const labels = Object.keys(reductionRates);
+            const data = labels.map(gauge => {
+                const rate = reductionRates[gauge];
+                return (perfectVal * rate.PERFECT) +
+                       (greatVal   * rate.GREAT)   +
+                       (goodVal    * rate.GOOD)    +
+                       (missVal    * rate.MISS);
+            });
+            const colors = data.map(dmg => (dmg >= 100 ? "red" : "skyblue"));
+
+            // 結果を表示
+            labels.forEach((gauge, i) => {
+                const box = document.createElement("span");
+                box.className = "result-box";
+                box.style.backgroundColor = colors[i];
+                box.textContent = `${gauge}: ${data[i].toFixed(1)} Damage`;
+                resultDiv.appendChild(box);
+            });
+
+            updateChart(ctx, labels, data, colors);
+        }
+
+        function updateChart(ctx, labels, data, colors) {
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [{ label: "Damage", data: data, backgroundColor: colors }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: { y: { beginAtZero: true, suggestedMax: 110 } },
+                    plugins: {
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    xMin: 100,
+                                    xMax: 100,
+                                    borderColor: 'red',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    label: { content: '100 Damage', enabled: true, position: 'end' }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
