@@ -179,8 +179,9 @@
             display: flex;
             align-items: flex-end;
             justify-content: flex-start;
-            gap: 1px;
             overflow: hidden;
+            transform-origin: left bottom;
+            will-change: transform;
         }
         .y-axis {
             position: absolute;
@@ -219,12 +220,16 @@
         }
         .bar {
             flex: 0 0 auto;
-            width: 6px;
+            width: var(--bar-width, 10px);
+            margin-right: var(--bar-gap, 2px);
             min-width: 0;
             min-height: 12px;
             border-radius: 4px 4px 0 0;
             background: linear-gradient(180deg, #7aa6ff, #3c6fe7);
             transition: height 0.13s ease, background-color 0.13s ease;
+        }
+        .bar:last-child {
+            margin-right: 0;
         }
         .bar.highlight {
             background: linear-gradient(180deg, #ff9387, #ff4c39);
@@ -333,8 +338,11 @@
             radix: { key: "radix", label: "基数ソート", generator: radixSortSteps }
         };
 
-        const DEFAULT_BAR_GAP = 1;
-        const LARGE_BAR_COUNT_THRESHOLD = 160;
+        const BASE_BAR_WIDTH = 12;
+        const BASE_BAR_GAP = 3;
+        const TIGHT_BAR_GAP = 1;
+        const HIGH_DENSITY_THRESHOLD = 160;
+        const MIN_BAR_WIDTH = 1;
 
         let currentArray = [];
 
@@ -605,7 +613,7 @@
             const wrapperHeight = wrapper.clientHeight || 200;
             const scale = initialScale || getScaleFromMax(Math.max(...values, 1));
             const layout = calculateBarLayout(wrapper, values.length);
-            wrapper.style.gap = `${layout.gap}px`;
+            applyLayoutToWrapper(wrapper, layout);
 
             const state = {
                 axis,
@@ -614,8 +622,7 @@
                 bars: [],
                 wrapperHeight,
                 scale,
-                barWidth: layout.width,
-                gap: layout.gap
+                layout
             };
 
             updateYAxis(axis, grid, state.scale);
@@ -623,7 +630,6 @@
             state.bars = values.map(value => {
                 const bar = document.createElement("div");
                 bar.className = "bar";
-                applyBarWidth(bar, state.barWidth);
                 bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 wrapper.appendChild(bar);
                 return bar;
@@ -643,18 +649,15 @@
             }
 
             const layout = calculateBarLayout(state.wrapper, values.length);
-            if (Math.abs(layout.width - state.barWidth) > 0.1 || layout.gap !== state.gap) {
-                state.barWidth = layout.width;
-                state.gap = layout.gap;
-                state.wrapper.style.gap = `${state.gap}px`;
-                state.bars.forEach(bar => applyBarWidth(bar, state.barWidth));
+            if (!layoutsEqual(state.layout, layout)) {
+                state.layout = layout;
+                applyLayoutToWrapper(state.wrapper, layout);
             }
 
             if (values.length > state.bars.length) {
                 for (let i = state.bars.length; i < values.length; i++) {
                     const bar = document.createElement("div");
                     bar.className = "bar";
-                    applyBarWidth(bar, state.barWidth);
                     state.wrapper.appendChild(bar);
                     state.bars.push(bar);
                 }
@@ -667,7 +670,6 @@
 
             state.bars.forEach((bar, index) => {
                 const value = values[index] ?? 0;
-                applyBarWidth(bar, state.barWidth);
                 bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 bar.classList.toggle("highlight", highlights.includes(index));
             });
@@ -677,28 +679,32 @@
             const rect = wrapper.getBoundingClientRect();
             const parent = wrapper.parentElement;
             const wrapperWidth = rect.width || wrapper.clientWidth || parent?.clientWidth || parent?.offsetWidth || 0;
+            const baseWidth = BASE_BAR_WIDTH;
+            const gap = count > HIGH_DENSITY_THRESHOLD ? TIGHT_BAR_GAP : BASE_BAR_GAP;
+
             if (count <= 0 || wrapperWidth <= 0) {
-                return { width: 0, gap: DEFAULT_BAR_GAP };
+                return { baseWidth, gap, scale: 1 };
             }
 
-            let gap = count > LARGE_BAR_COUNT_THRESHOLD ? 0 : DEFAULT_BAR_GAP;
-            let available = wrapperWidth - gap * Math.max(0, count - 1);
-            if (available < 0) {
-                gap = 0;
-                available = wrapperWidth;
+            const totalBase = (count * baseWidth) + ((count - 1) * gap);
+            let scale = totalBase > wrapperWidth ? wrapperWidth / totalBase : 1;
+            const minScale = MIN_BAR_WIDTH / baseWidth;
+            if (scale < minScale) {
+                scale = minScale;
             }
 
-            const width = available / count;
-            return {
-                width: Math.max(width, 0.5),
-                gap
-            };
+            return { baseWidth, gap, scale };
         }
 
-        function applyBarWidth(bar, width) {
-            const safeWidth = Math.max(width, 0.5);
-            bar.style.width = `${safeWidth}px`;
-            bar.style.flex = `0 0 ${safeWidth}px`;
+        function applyLayoutToWrapper(wrapper, layout) {
+            wrapper.style.setProperty("--bar-width", `${layout.baseWidth}px`);
+            wrapper.style.setProperty("--bar-gap", `${layout.gap}px`);
+            wrapper.style.transform = `scaleX(${layout.scale})`;
+        }
+
+        function layoutsEqual(a, b) {
+            if (!a || !b) return false;
+            return a.baseWidth === b.baseWidth && a.gap === b.gap && Math.abs(a.scale - b.scale) < 0.001;
         }
 
         function updateYAxis(axisEl, gridEl, scale) {
