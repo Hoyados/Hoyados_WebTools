@@ -1,3 +1,3 @@
 # DDR_FLAREGAUGE
 DDR flare gauge allowable checker
-Calculation Tool (main.html)
+Calculation Tool (ddr_flare_gauge.html)
