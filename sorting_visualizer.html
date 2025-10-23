@@ -179,7 +179,7 @@
             display: flex;
             align-items: flex-end;
             justify-content: flex-start;
-            gap: var(--bar-gap, 1px);
+            gap: 1px;
             overflow: hidden;
         }
         .y-axis {
@@ -218,8 +218,8 @@
             border-top: 1px dashed #d6e0f5;
         }
         .bar {
-            flex: 0 0 var(--bar-width, 6px);
-            width: var(--bar-width, 6px);
+            flex: 0 0 auto;
+            width: 6px;
             min-width: 0;
             min-height: 12px;
             border-radius: 4px 4px 0 0;
@@ -605,7 +605,7 @@
             const wrapperHeight = wrapper.clientHeight || 200;
             const scale = initialScale || getScaleFromMax(Math.max(...values, 1));
             const layout = calculateBarLayout(wrapper, values.length);
-            wrapper.style.setProperty('--bar-gap', `${layout.gap}px`);
+            wrapper.style.gap = `${layout.gap}px`;
 
             const state = {
                 axis,
@@ -646,7 +646,7 @@
             if (Math.abs(layout.width - state.barWidth) > 0.1 || layout.gap !== state.gap) {
                 state.barWidth = layout.width;
                 state.gap = layout.gap;
-                state.wrapper.style.setProperty('--bar-gap', `${state.gap}px`);
+                state.wrapper.style.gap = `${state.gap}px`;
                 state.bars.forEach(bar => applyBarWidth(bar, state.barWidth));
             }
 
@@ -675,7 +675,8 @@
 
         function calculateBarLayout(wrapper, count) {
             const rect = wrapper.getBoundingClientRect();
-            const wrapperWidth = rect.width || wrapper.clientWidth || 0;
+            const parent = wrapper.parentElement;
+            const wrapperWidth = rect.width || wrapper.clientWidth || parent?.clientWidth || parent?.offsetWidth || 0;
             if (count <= 0 || wrapperWidth <= 0) {
                 return { width: 0, gap: DEFAULT_BAR_GAP };
             }
@@ -689,14 +690,15 @@
 
             const width = available / count;
             return {
-                width: Math.max(width, 0),
+                width: Math.max(width, 0.5),
                 gap
             };
         }
 
         function applyBarWidth(bar, width) {
-            const safeWidth = Math.max(width, 0);
-            bar.style.setProperty('--bar-width', `${safeWidth}px`);
+            const safeWidth = Math.max(width, 0.5);
+            bar.style.width = `${safeWidth}px`;
+            bar.style.flex = `0 0 ${safeWidth}px`;
         }
 
         function updateYAxis(axisEl, gridEl, scale) {
