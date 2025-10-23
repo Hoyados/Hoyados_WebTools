@@ -37,6 +37,21 @@
             margin-top: 0;
             color: #4b5567;
         }
+        .layout {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        .sidebar {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .main-area {
+            flex: 7;
+            min-height: 320px;
+        }
         .controls, .actions {
             display: flex;
             flex-wrap: wrap;
@@ -232,6 +247,14 @@
             font-size: 12px;
             color: #4b5567;
         }
+        @media (max-width: 900px) {
+            .layout {
+                flex-direction: column;
+            }
+            .sidebar, .main-area {
+                width: 100%;
+            }
+        }
         @media (max-width: 680px) {
             .controls, .actions {
                 flex-direction: column;
@@ -247,47 +270,53 @@
     <div class="container">
         <a class="back-link" href="index.html">← インデックスへ戻る</a>
         <h1>ソートアルゴリズム可視化ツール</h1>
-        <p class="description">最大3種類のソートを同じ配列で比較できます。速度や要素数を調整しながら、各アルゴリズムの動きを観察してください。</p>
+        <p class="description">最大5種類のソートを同じ配列で比較できます。速度や要素数を調整しながら、各アルゴリズムの動きを観察してください。</p>
 
-        <div class="controls">
-            <label for="elementCount">要素数:
-                <input type="number" id="elementCount" min="5" max="80" value="20">
-            </label>
-            <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
-            <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
+        <div class="layout">
+            <div class="sidebar">
+                <div class="controls">
+                    <label for="elementCount">要素数:
+                        <input type="number" id="elementCount" min="5" max="80" value="20">
+                    </label>
+                    <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
+                    <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
+                </div>
+
+                <div id="sequenceDisplay"></div>
+
+                <div class="algorithms">
+                    <strong>アルゴリズムを選択（最大5つ）</strong>
+                    <div class="algorithm-options" id="algorithmOptions"></div>
+                </div>
+
+                <div class="actions">
+                    <button id="startBtn">ソートを開始</button>
+                    <button id="stopBtn" class="secondary" disabled>強制停止</button>
+                    <label class="speed-label">描画間隔:
+                        <input type="range" id="speedRange" min="15" max="220" value="80">
+                        <span id="speedValue">80ms</span>
+                    </label>
+                    <label class="timeout-label">タイムアウト:
+                        <select id="timeoutSelect">
+                            <option value="1">1分</option>
+                            <option value="2" selected>2分</option>
+                            <option value="3">3分</option>
+                            <option value="4">4分</option>
+                            <option value="5">5分</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="alert" class="alert hidden"></div>
+            </div>
+            <div class="main-area">
+                <div id="panels" class="panels"></div>
+            </div>
         </div>
-
-        <div id="sequenceDisplay"></div>
-
-        <div class="algorithms">
-            <strong>アルゴリズムを選択（最大3つ）</strong>
-            <div class="algorithm-options" id="algorithmOptions"></div>
-        </div>
-
-        <div class="actions">
-            <button id="startBtn">ソートを開始</button>
-            <label class="speed-label">描画間隔:
-                <input type="range" id="speedRange" min="15" max="220" value="80">
-                <span id="speedValue">80ms</span>
-            </label>
-            <label class="timeout-label">タイムアウト:
-                <select id="timeoutSelect">
-                    <option value="1">1分</option>
-                    <option value="2" selected>2分</option>
-                    <option value="3">3分</option>
-                    <option value="4">4分</option>
-                    <option value="5">5分</option>
-                </select>
-            </label>
-        </div>
-
-        <div id="alert" class="alert hidden"></div>
-
-        <div id="panels" class="panels"></div>
     </div>
 
     <script>
-        const MAX_ALGORITHMS = 3;
+        const MAX_ALGORITHMS = 5;
         const algorithms = {
             bubble: { key: "bubble", label: "バブルソート", generator: bubbleSortSteps },
             insertion: { key: "insertion", label: "挿入ソート", generator: insertionSortSteps },
@@ -306,6 +335,7 @@
         const elementCountInput = document.getElementById("elementCount");
         const randomizeBtn = document.getElementById("randomizeBtn");
         const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
         const algorithmOptions = document.getElementById("algorithmOptions");
         const panelsContainer = document.getElementById("panels");
         const alertBox = document.getElementById("alert");
@@ -313,6 +343,7 @@
         const speedRange = document.getElementById("speedRange");
         const speedValue = document.getElementById("speedValue");
         const timeoutSelect = document.getElementById("timeoutSelect");
+        let activeRunControllers = [];
 
         init();
 
@@ -335,6 +366,7 @@
                 panelsContainer.innerHTML = "";
             });
             startBtn.addEventListener("click", startVisualization);
+            stopBtn.addEventListener("click", stopAllRuns);
         }
 
         function renderAlgorithmOptions() {
@@ -400,18 +432,44 @@
             panelsContainer.innerHTML = "";
             startBtn.disabled = true;
             randomizeBtn.disabled = true;
+            stopBtn.disabled = false;
+            activeRunControllers = [];
 
-            const tasks = selectedKeys.map(key =>
-                runVisualizationForAlgorithm(key, arrayClone, delay, timeoutMs, timeoutMinutes)
-            );
+            const tasks = selectedKeys.map(key => {
+                const controller = createRunController();
+                activeRunControllers.push(controller);
+                return runVisualizationForAlgorithm(key, arrayClone, delay, timeoutMs, timeoutMinutes, controller);
+            });
 
             Promise.allSettled(tasks).finally(() => {
                 startBtn.disabled = false;
                 randomizeBtn.disabled = false;
+                stopBtn.disabled = true;
+                activeRunControllers = [];
             });
         }
 
-        async function runVisualizationForAlgorithm(key, baseArray, delay, timeoutMs, timeoutMinutes) {
+        function stopAllRuns() {
+            if (activeRunControllers.length === 0) {
+                return;
+            }
+            activeRunControllers.forEach(controller => controller.cancel());
+            stopBtn.disabled = true;
+        }
+
+        function createRunController() {
+            let cancelled = false;
+            return {
+                cancel() {
+                    cancelled = true;
+                },
+                get cancelled() {
+                    return cancelled;
+                }
+            };
+        }
+
+        async function runVisualizationForAlgorithm(key, baseArray, delay, timeoutMs, timeoutMinutes, controller) {
             const algo = algorithms[key];
             const panel = createPanel(algo.label);
             panelsContainer.appendChild(panel.container);
@@ -431,26 +489,60 @@
                 return;
             }
 
+            if (!Array.isArray(steps) || steps.length === 0) {
+                steps = [{ array: [...array], highlights: [] }];
+            }
+
             const generationTime = performance.now() - stepsStart;
             const timerController = createTimer(timerEl);
             timerController.start();
 
-            const barsState = createBars(barsContainer, steps[0]?.array || array);
+            const overallMax = findMaxValueInSteps(steps);
+            const initialScale = getScaleFromMax(overallMax);
+            const barsState = createBars(barsContainer, steps[0]?.array || array, initialScale);
+
             let timedOut = false;
+            let forcedStop = false;
             const timeoutAt = performance.now() + timeoutMs;
 
             for (let i = 0; i < steps.length; i++) {
+                if (controller.cancelled) {
+                    forcedStop = true;
+                    break;
+                }
+
                 const step = steps[i];
                 updateBars(barsState, step.array, step.highlights);
-                await wait(delay);
+
+                if (controller.cancelled) {
+                    forcedStop = true;
+                    break;
+                }
 
                 if (performance.now() > timeoutAt) {
                     timedOut = true;
                     break;
                 }
+
+                if (i < steps.length - 1) {
+                    await wait(delay);
+                    if (performance.now() > timeoutAt) {
+                        timedOut = true;
+                        break;
+                    }
+                    if (controller.cancelled) {
+                        forcedStop = true;
+                        break;
+                    }
+                }
             }
 
             timerController.stop();
+
+            if (controller.cancelled || forcedStop) {
+                statusEl.textContent = "強制停止しました。";
+                return;
+            }
 
             if (timedOut) {
                 statusEl.textContent = `タイムアウト(${timeoutMinutes}分)しました。描画を停止しました。`;
@@ -489,7 +581,7 @@
             return { container, timerEl, statusEl, barsContainer };
         }
 
-        function createBars(container, values) {
+        function createBars(container, values, initialScale) {
             container.innerHTML = "";
 
             const axis = document.createElement("div");
@@ -504,24 +596,27 @@
             wrapper.className = "bars-wrapper";
             container.appendChild(wrapper);
 
+            const wrapperHeight = wrapper.clientHeight || 200;
+            const scale = initialScale || getScaleFromMax(Math.max(...values, 1));
+
             const state = {
                 axis,
                 grid,
                 wrapper,
                 bars: [],
-                wrapperHeight: wrapper.clientHeight || 200
+                wrapperHeight,
+                scale
             };
 
-            const scale = getNiceScale(values);
+            updateYAxis(axis, grid, state.scale);
+
             state.bars = values.map(value => {
                 const bar = document.createElement("div");
                 bar.className = "bar";
-                bar.style.height = calculateBarHeight(value, scale.max, state.wrapperHeight);
+                bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 wrapper.appendChild(bar);
                 return bar;
             });
-
-            updateYAxis(axis, grid, scale);
 
             return state;
         }
@@ -530,8 +625,11 @@
             const wrapperHeight = state.wrapper.clientHeight || state.wrapperHeight || 200;
             state.wrapperHeight = wrapperHeight;
 
-            const scale = getNiceScale(values);
-            updateYAxis(state.axis, state.grid, scale);
+            const currentMax = Math.max(...values, 0);
+            if (currentMax > state.scale.max || currentMax < state.scale.max / 4) {
+                state.scale = getScaleFromMax(Math.max(currentMax, 1));
+                updateYAxis(state.axis, state.grid, state.scale);
+            }
 
             if (values.length > state.bars.length) {
                 for (let i = state.bars.length; i < values.length; i++) {
@@ -549,7 +647,7 @@
 
             state.bars.forEach((bar, index) => {
                 const value = values[index] ?? 0;
-                bar.style.height = calculateBarHeight(value, scale.max, wrapperHeight);
+                bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 bar.classList.toggle("highlight", highlights.includes(index));
             });
         }
@@ -578,11 +676,11 @@
             }
         }
 
-        function getNiceScale(values, tickCount = 4) {
-            const maxValue = Math.max(...values, 1);
-            let step = niceNumber(maxValue / tickCount, true);
+        function getScaleFromMax(maxValue, tickCount = 4) {
+            const safeMax = Math.max(maxValue, 1);
+            let step = niceNumber(safeMax / tickCount, true);
             let niceMax = step * tickCount;
-            while (niceMax < maxValue) {
+            while (niceMax < safeMax) {
                 step = niceNumber(step * 1.5, true);
                 niceMax = step * tickCount;
             }
@@ -610,6 +708,19 @@
             }
 
             return niceFraction * Math.pow(10, exponent);
+        }
+
+        function findMaxValueInSteps(steps) {
+            let maxValue = 0;
+            steps.forEach(step => {
+                if (!step || !Array.isArray(step.array)) return;
+                for (let i = 0; i < step.array.length; i++) {
+                    if (step.array[i] > maxValue) {
+                        maxValue = step.array[i];
+                    }
+                }
+            });
+            return maxValue;
         }
 
         function calculateBarHeight(value, maxScale, availableHeight) {
