@@ -37,6 +37,21 @@
             margin-top: 0;
             color: #4b5567;
         }
+        .layout {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        .sidebar {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .main-area {
+            flex: 7;
+            min-height: 320px;
+        }
         .controls, .actions {
             display: flex;
             flex-wrap: wrap;
@@ -55,7 +70,7 @@
             gap: 6px;
         }
         .controls input[type="number"] {
-            width: 80px;
+            width: 90px;
             padding: 4px 6px;
         }
         button {
@@ -116,8 +131,8 @@
             display: none;
         }
         .panels {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 16px;
         }
         .panel {
@@ -146,17 +161,66 @@
             position: relative;
             flex: 1;
             display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 4px;
-            height: 220px;
-            padding: 10px;
+            align-items: stretch;
+            justify-content: stretch;
+            height: 240px;
+            padding: 24px 18px 34px 58px;
             background-color: #f6f8fb;
             border-radius: 8px;
+            border: 1px solid #e3e9f5;
+            overflow: hidden;
+        }
+        .bars-wrapper {
+            position: absolute;
+            left: 58px;
+            right: 18px;
+            top: 24px;
+            bottom: 34px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            gap: 2px;
+            overflow: hidden;
+        }
+        .y-axis {
+            position: absolute;
+            left: 16px;
+            top: 24px;
+            bottom: 34px;
+            width: 36px;
+            font-size: 11px;
+            color: #5d6c8b;
+            pointer-events: none;
+        }
+        .y-tick {
+            position: absolute;
+            left: 0;
+            transform: translateY(50%);
+        }
+        .y-tick.top {
+            transform: translateY(-50%);
+        }
+        .y-tick.bottom {
+            transform: translateY(0);
+        }
+        .y-grid {
+            position: absolute;
+            left: 58px;
+            right: 18px;
+            top: 24px;
+            bottom: 34px;
+            pointer-events: none;
+        }
+        .y-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed #d6e0f5;
         }
         .bar {
-            flex: 1;
-            min-width: 6px;
+            flex: 0 0 6px;
+            width: 6px;
+            min-height: 12px;
             border-radius: 4px 4px 0 0;
             background: linear-gradient(180deg, #7aa6ff, #3c6fe7);
             transition: height 0.13s ease, background-color 0.13s ease;
@@ -173,9 +237,25 @@
         .actions input[type="range"] {
             width: 160px;
         }
+        .actions select {
+            padding: 4px 6px;
+            border-radius: 4px;
+            border: 1px solid #c3cde4;
+            background-color: #fff;
+            font-size: 14px;
+            color: #1f2a44;
+        }
         .speed-label span {
             font-size: 12px;
             color: #4b5567;
+        }
+        @media (max-width: 900px) {
+            .layout {
+                flex-direction: column;
+            }
+            .sidebar, .main-area {
+                width: 100%;
+            }
         }
         @media (max-width: 680px) {
             .controls, .actions {
@@ -192,60 +272,83 @@
     <div class="container">
         <a class="back-link" href="index.html">← インデックスへ戻る</a>
         <h1>ソートアルゴリズム可視化ツール</h1>
-        <p class="description">最大3種類のソートを同じ配列で比較できます。速度や要素数を調整しながら、各アルゴリズムの動きを観察してください。</p>
+        <p class="description">最大5種類のソートを同じ配列で比較できます。速度や要素数を調整しながら、各アルゴリズムの動きを観察してください。</p>
 
-        <div class="controls">
-            <label for="elementCount">要素数:
-                <input type="number" id="elementCount" min="5" max="100" value="20">
-            </label>
-            <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
-            <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
+        <div class="layout">
+            <div class="sidebar">
+                <div class="controls">
+                    <label for="elementCount">要素数:
+                        <input type="number" id="elementCount" min="5" max="1000" value="20">
+                    </label>
+                    <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
+                    <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
+                </div>
+
+                <div id="sequenceDisplay"></div>
+
+                <div class="algorithms">
+                    <strong>アルゴリズムを選択（最大5つ）</strong>
+                    <div class="algorithm-options" id="algorithmOptions"></div>
+                </div>
+
+                <div class="actions">
+                    <button id="startBtn">ソートを開始</button>
+                    <button id="stopBtn" class="secondary" disabled>強制停止</button>
+                    <label class="speed-label">描画間隔:
+                        <input type="range" id="speedRange" min="15" max="220" value="80">
+                        <span id="speedValue">80ms</span>
+                    </label>
+                    <label class="timeout-label">タイムアウト:
+                        <select id="timeoutSelect">
+                            <option value="1">1分</option>
+                            <option value="2" selected>2分</option>
+                            <option value="3">3分</option>
+                            <option value="4">4分</option>
+                            <option value="5">5分</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div id="alert" class="alert hidden"></div>
+            </div>
+            <div class="main-area">
+                <div id="panels" class="panels"></div>
+            </div>
         </div>
-
-        <div id="sequenceDisplay"></div>
-
-        <div class="algorithms">
-            <strong>アルゴリズムを選択（最大3つ）</strong>
-            <div class="algorithm-options" id="algorithmOptions"></div>
-        </div>
-
-        <div class="actions">
-            <button id="startBtn">ソートを開始</button>
-            <label class="speed-label">描画間隔:
-                <input type="range" id="speedRange" min="15" max="220" value="80">
-                <span id="speedValue">80ms</span>
-            </label>
-            <span style="font-size:13px;color:#6b7a99;">タイムアウト: 15秒</span>
-        </div>
-
-        <div id="alert" class="alert hidden"></div>
-
-        <div id="panels" class="panels"></div>
     </div>
 
     <script>
-        const MAX_ALGORITHMS = 3;
-        const TIMEOUT_MS = 15000;
+        const MAX_ALGORITHMS = 5;
+        const MAX_ELEMENTS = 100;
+        const MAX_BAR_VALUE = 100;
+        const MAX_CHART_HEIGHT = 200;
         const algorithms = {
             bubble: { key: "bubble", label: "バブルソート", generator: bubbleSortSteps },
-            quick: { key: "quick", label: "クイックソート", generator: quickSortSteps },
-            cocktail: { key: "cocktail", label: "カクテルソート", generator: cocktailSortSteps },
             insertion: { key: "insertion", label: "挿入ソート", generator: insertionSortSteps },
-            selection: { key: "selection", label: "選択ソート", generator: selectionSortSteps }
+            selection: { key: "selection", label: "選択ソート", generator: selectionSortSteps },
+            cocktail: { key: "cocktail", label: "カクテルソート", generator: cocktailSortSteps },
+            quick: { key: "quick", label: "クイックソート", generator: quickSortSteps },
+            merge: { key: "merge", label: "マージソート", generator: mergeSortSteps },
+            heap: { key: "heap", label: "ヒープソート", generator: heapSortSteps },
+            shell: { key: "shell", label: "シェルソート", generator: shellSortSteps },
+            gnome: { key: "gnome", label: "ノームソート", generator: gnomeSortSteps },
+            radix: { key: "radix", label: "基数ソート", generator: radixSortSteps }
         };
-        const MAX_BAR_VALUE = 100;
 
         let currentArray = [];
 
         const elementCountInput = document.getElementById("elementCount");
         const randomizeBtn = document.getElementById("randomizeBtn");
         const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
         const algorithmOptions = document.getElementById("algorithmOptions");
         const panelsContainer = document.getElementById("panels");
         const alertBox = document.getElementById("alert");
         const sequenceDisplay = document.getElementById("sequenceDisplay");
         const speedRange = document.getElementById("speedRange");
         const speedValue = document.getElementById("speedValue");
+        const timeoutSelect = document.getElementById("timeoutSelect");
+        let activeRunControllers = [];
 
         init();
 
@@ -268,6 +371,7 @@
                 panelsContainer.innerHTML = "";
             });
             startBtn.addEventListener("click", startVisualization);
+            stopBtn.addEventListener("click", stopAllRuns);
         }
 
         function renderAlgorithmOptions() {
@@ -297,7 +401,7 @@
 
         function generateNewArray() {
             const count = clampElementCount();
-            currentArray = Array.from({ length: count }, () => Math.floor(Math.random() * 100) + 1);
+            currentArray = Array.from({ length: count }, () => Math.floor(Math.random() * MAX_BAR_VALUE) + 1);
         }
 
         function updateSequenceDisplay() {
@@ -327,20 +431,50 @@
 
             const arrayClone = [...currentArray];
             const delay = parseInt(speedRange.value, 10);
+            const timeoutMinutes = parseInt(timeoutSelect.value, 10);
+            const timeoutMs = timeoutMinutes * 60000;
 
             panelsContainer.innerHTML = "";
             startBtn.disabled = true;
             randomizeBtn.disabled = true;
+            stopBtn.disabled = false;
+            activeRunControllers = [];
 
-            const tasks = selectedKeys.map(key => runVisualizationForAlgorithm(key, arrayClone, delay));
+            const tasks = selectedKeys.map(key => {
+                const controller = createRunController();
+                activeRunControllers.push(controller);
+                return runVisualizationForAlgorithm(key, arrayClone, delay, timeoutMs, timeoutMinutes, controller);
+            });
 
             Promise.allSettled(tasks).finally(() => {
                 startBtn.disabled = false;
                 randomizeBtn.disabled = false;
+                stopBtn.disabled = true;
+                activeRunControllers = [];
             });
         }
 
-        async function runVisualizationForAlgorithm(key, baseArray, delay) {
+        function stopAllRuns() {
+            if (activeRunControllers.length === 0) {
+                return;
+            }
+            activeRunControllers.forEach(controller => controller.cancel());
+            stopBtn.disabled = true;
+        }
+
+        function createRunController() {
+            let cancelled = false;
+            return {
+                cancel() {
+                    cancelled = true;
+                },
+                get cancelled() {
+                    return cancelled;
+                }
+            };
+        }
+
+        async function runVisualizationForAlgorithm(key, baseArray, delay, timeoutMs, timeoutMinutes, controller) {
             const algo = algorithms[key];
             const panel = createPanel(algo.label);
             panelsContainer.appendChild(panel.container);
@@ -360,29 +494,61 @@
                 return;
             }
 
+            if (!Array.isArray(steps) || steps.length === 0) {
+                steps = [{ array: [...array], highlights: [] }];
+            }
+
             const generationTime = performance.now() - stepsStart;
             const timerController = createTimer(timerEl);
             timerController.start();
 
-            const bars = createBars(barsContainer, steps[0]?.array || array);
+            const barsState = createBars(barsContainer, steps[0]?.array || array);
+
             let timedOut = false;
-            const timeoutAt = performance.now() + TIMEOUT_MS;
+            let forcedStop = false;
+            const timeoutAt = performance.now() + timeoutMs;
 
             for (let i = 0; i < steps.length; i++) {
+                if (controller.cancelled) {
+                    forcedStop = true;
+                    break;
+                }
+
                 const step = steps[i];
-                updateBars(bars, step.array, step.highlights);
-                await wait(delay);
+                updateBars(barsState, step.array, step.highlights);
+
+                if (controller.cancelled) {
+                    forcedStop = true;
+                    break;
+                }
 
                 if (performance.now() > timeoutAt) {
                     timedOut = true;
                     break;
                 }
+
+                if (i < steps.length - 1) {
+                    await wait(delay);
+                    if (performance.now() > timeoutAt) {
+                        timedOut = true;
+                        break;
+                    }
+                    if (controller.cancelled) {
+                        forcedStop = true;
+                        break;
+                    }
+                }
             }
 
             timerController.stop();
 
+            if (controller.cancelled || forcedStop) {
+                statusEl.textContent = "強制停止しました。";
+                return;
+            }
+
             if (timedOut) {
-                statusEl.textContent = "タイムアウトしました。描画を停止しました。";
+                statusEl.textContent = `タイムアウト(${timeoutMinutes}分)しました。描画を停止しました。`;
             } else {
                 statusEl.textContent = `完了 (${timerController.elapsedMs.toFixed(0)}ms / ステップ生成 ${generationTime.toFixed(1)}ms)`;
             }
@@ -420,28 +586,90 @@
 
         function createBars(container, values) {
             container.innerHTML = "";
-            return values.map(value => {
+
+            const axis = document.createElement("div");
+            axis.className = "y-axis";
+            container.appendChild(axis);
+
+            const grid = document.createElement("div");
+            grid.className = "y-grid";
+            container.appendChild(grid);
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "bars-wrapper";
+            container.appendChild(wrapper);
+
+            const state = {
+                axis,
+                grid,
+                wrapper,
+                bars: []
+            };
+
+            updateYAxis(axis, grid);
+
+            state.bars = values.map(value => {
                 const bar = document.createElement("div");
                 bar.className = "bar";
                 bar.style.height = calculateBarHeight(value);
-                container.appendChild(bar);
+                wrapper.appendChild(bar);
                 return bar;
             });
+
+            return state;
         }
 
-        function updateBars(bars, values, highlights = []) {
-            bars.forEach((bar, index) => {
-                if (!bar) return;
+        function updateBars(state, values, highlights = []) {
+            const { wrapper, bars } = state;
+
+            if (values.length > bars.length) {
+                for (let i = bars.length; i < values.length; i++) {
+                    const bar = document.createElement("div");
+                    bar.className = "bar";
+                    wrapper.appendChild(bar);
+                    bars.push(bar);
+                }
+            } else if (values.length < bars.length) {
+                while (bars.length > values.length) {
+                    const bar = bars.pop();
+                    if (bar) bar.remove();
+                }
+            }
+
+            state.bars.forEach((bar, index) => {
                 const value = values[index] ?? 0;
                 bar.style.height = calculateBarHeight(value);
                 bar.classList.toggle("highlight", highlights.includes(index));
             });
         }
 
+        function updateYAxis(axisEl, gridEl) {
+            const ticks = [MAX_BAR_VALUE, 75, 50, 25, 0];
+            axisEl.innerHTML = "";
+            gridEl.innerHTML = "";
+            ticks.forEach((value, idx) => {
+                const ratio = value / MAX_BAR_VALUE;
+                const tick = document.createElement("div");
+                tick.className = "y-tick";
+                if (idx === 0) tick.classList.add("top");
+                if (idx === ticks.length - 1) tick.classList.add("bottom");
+                tick.style.bottom = `${ratio * 100}%`;
+                tick.textContent = value;
+                axisEl.appendChild(tick);
+
+                if (value !== 0) {
+                    const line = document.createElement("div");
+                    line.className = "y-line";
+                    line.style.bottom = `${ratio * 100}%`;
+                    gridEl.appendChild(line);
+                }
+            });
+        }
+
         function calculateBarHeight(value) {
             const clamped = Math.min(Math.max(value, 0), MAX_BAR_VALUE);
             const normalized = clamped / MAX_BAR_VALUE;
-            const height = Math.max(12, normalized * 200);
+            const height = Math.max(12, normalized * MAX_CHART_HEIGHT);
             return `${height}px`;
         }
 
@@ -604,6 +832,188 @@
             }
 
             quick(0, arr.length - 1);
+            steps.push({ array: [...arr], highlights: [] });
+            return steps;
+        }
+
+        function mergeSortSteps(array) {
+            const arr = [...array];
+            const steps = [{ array: [...arr], highlights: [] }];
+
+            function mergeSort(start, end) {
+                if (start >= end) return;
+                const mid = Math.floor((start + end) / 2);
+                mergeSort(start, mid);
+                mergeSort(mid + 1, end);
+                merge(start, mid, end);
+            }
+
+            function merge(start, mid, end) {
+                const left = arr.slice(start, mid + 1);
+                const right = arr.slice(mid + 1, end + 1);
+                let i = 0;
+                let j = 0;
+                let k = start;
+
+                while (i < left.length && j < right.length) {
+                    const leftIndex = start + i;
+                    const rightIndex = mid + 1 + j;
+                    steps.push({ array: [...arr], highlights: [leftIndex, rightIndex] });
+                    if (left[i] <= right[j]) {
+                        arr[k] = left[i++];
+                    } else {
+                        arr[k] = right[j++];
+                    }
+                    steps.push({ array: [...arr], highlights: [k] });
+                    k++;
+                }
+
+                while (i < left.length) {
+                    arr[k] = left[i++];
+                    steps.push({ array: [...arr], highlights: [k] });
+                    k++;
+                }
+
+                while (j < right.length) {
+                    arr[k] = right[j++];
+                    steps.push({ array: [...arr], highlights: [k] });
+                    k++;
+                }
+            }
+
+            mergeSort(0, arr.length - 1);
+            steps.push({ array: [...arr], highlights: [] });
+            return steps;
+        }
+
+        function heapSortSteps(array) {
+            const arr = [...array];
+            const steps = [{ array: [...arr], highlights: [] }];
+            const n = arr.length;
+
+            function heapify(length, i) {
+                let largest = i;
+                const left = 2 * i + 1;
+                const right = 2 * i + 2;
+
+                if (left < length) {
+                    steps.push({ array: [...arr], highlights: [i, left] });
+                    if (arr[left] > arr[largest]) {
+                        largest = left;
+                    }
+                }
+
+                if (right < length) {
+                    steps.push({ array: [...arr], highlights: [largest, right] });
+                    if (arr[right] > arr[largest]) {
+                        largest = right;
+                    }
+                }
+
+                if (largest !== i) {
+                    [arr[i], arr[largest]] = [arr[largest], arr[i]];
+                    steps.push({ array: [...arr], highlights: [i, largest] });
+                    heapify(length, largest);
+                }
+            }
+
+            for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                heapify(n, i);
+            }
+
+            for (let i = n - 1; i > 0; i--) {
+                [arr[0], arr[i]] = [arr[i], arr[0]];
+                steps.push({ array: [...arr], highlights: [0, i] });
+                heapify(i, 0);
+            }
+
+            steps.push({ array: [...arr], highlights: [] });
+            return steps;
+        }
+
+        function shellSortSteps(array) {
+            const arr = [...array];
+            const steps = [{ array: [...arr], highlights: [] }];
+            let gap = Math.floor(arr.length / 2);
+
+            while (gap > 0) {
+                for (let i = gap; i < arr.length; i++) {
+                    const temp = arr[i];
+                    let j = i;
+                    steps.push({ array: [...arr], highlights: [i] });
+                    while (j >= gap && arr[j - gap] > temp) {
+                        arr[j] = arr[j - gap];
+                        steps.push({ array: [...arr], highlights: [j, j - gap] });
+                        j -= gap;
+                    }
+                    arr[j] = temp;
+                    steps.push({ array: [...arr], highlights: [j] });
+                }
+                gap = Math.floor(gap / 2);
+            }
+
+            steps.push({ array: [...arr], highlights: [] });
+            return steps;
+        }
+
+        function gnomeSortSteps(array) {
+            const arr = [...array];
+            const steps = [{ array: [...arr], highlights: [] }];
+            let index = 0;
+
+            while (index < arr.length) {
+                if (index === 0) {
+                    index++;
+                    continue;
+                }
+                steps.push({ array: [...arr], highlights: [index, index - 1] });
+                if (arr[index] >= arr[index - 1]) {
+                    index++;
+                } else {
+                    [arr[index], arr[index - 1]] = [arr[index - 1], arr[index]];
+                    steps.push({ array: [...arr], highlights: [index, index - 1] });
+                    index--;
+                }
+            }
+
+            steps.push({ array: [...arr], highlights: [] });
+            return steps;
+        }
+
+        function radixSortSteps(array) {
+            const arr = [...array];
+            const steps = [{ array: [...arr], highlights: [] }];
+            const max = Math.max(...arr, 0);
+            let exp = 1;
+
+            while (Math.floor(max / exp) > 0) {
+                const output = new Array(arr.length).fill(0);
+                const count = new Array(10).fill(0);
+
+                for (let i = 0; i < arr.length; i++) {
+                    const digit = Math.floor(arr[i] / exp) % 10;
+                    count[digit]++;
+                    steps.push({ array: [...arr], highlights: [i] });
+                }
+
+                for (let i = 1; i < 10; i++) {
+                    count[i] += count[i - 1];
+                }
+
+                for (let i = arr.length - 1; i >= 0; i--) {
+                    const digit = Math.floor(arr[i] / exp) % 10;
+                    output[count[digit] - 1] = arr[i];
+                    count[digit]--;
+                }
+
+                for (let i = 0; i < arr.length; i++) {
+                    arr[i] = output[i];
+                    steps.push({ array: [...arr], highlights: [i] });
+                }
+
+                exp *= 10;
+            }
+
             steps.push({ array: [...arr], highlights: [] });
             return steps;
         }
