@@ -70,7 +70,7 @@
             gap: 6px;
         }
         .controls input[type="number"] {
-            width: 80px;
+            width: 90px;
             padding: 4px 6px;
         }
         button {
@@ -168,6 +168,7 @@
             background-color: #f6f8fb;
             border-radius: 8px;
             border: 1px solid #e3e9f5;
+            overflow: hidden;
         }
         .bars-wrapper {
             position: absolute;
@@ -177,8 +178,9 @@
             bottom: 34px;
             display: flex;
             align-items: flex-end;
-            justify-content: center;
-            gap: 4px;
+            justify-content: flex-start;
+            gap: var(--bar-gap, 1px);
+            overflow: hidden;
         }
         .y-axis {
             position: absolute;
@@ -216,8 +218,9 @@
             border-top: 1px dashed #d6e0f5;
         }
         .bar {
-            flex: 1;
-            min-width: 6px;
+            flex: 0 0 var(--bar-width, 6px);
+            width: var(--bar-width, 6px);
+            min-width: 0;
             min-height: 12px;
             border-radius: 4px 4px 0 0;
             background: linear-gradient(180deg, #7aa6ff, #3c6fe7);
@@ -276,7 +279,7 @@
             <div class="sidebar">
                 <div class="controls">
                     <label for="elementCount">要素数:
-                        <input type="number" id="elementCount" min="5" max="80" value="20">
+                        <input type="number" id="elementCount" min="5" max="1000" value="20">
                     </label>
                     <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
                     <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
@@ -329,6 +332,9 @@
             gnome: { key: "gnome", label: "ノームソート", generator: gnomeSortSteps },
             radix: { key: "radix", label: "基数ソート", generator: radixSortSteps }
         };
+
+        const DEFAULT_BAR_GAP = 1;
+        const LARGE_BAR_COUNT_THRESHOLD = 160;
 
         let currentArray = [];
 
@@ -598,6 +604,8 @@
 
             const wrapperHeight = wrapper.clientHeight || 200;
             const scale = initialScale || getScaleFromMax(Math.max(...values, 1));
+            const layout = calculateBarLayout(wrapper, values.length);
+            wrapper.style.setProperty('--bar-gap', `${layout.gap}px`);
 
             const state = {
                 axis,
@@ -605,7 +613,9 @@
                 wrapper,
                 bars: [],
                 wrapperHeight,
-                scale
+                scale,
+                barWidth: layout.width,
+                gap: layout.gap
             };
 
             updateYAxis(axis, grid, state.scale);
@@ -613,6 +623,7 @@
             state.bars = values.map(value => {
                 const bar = document.createElement("div");
                 bar.className = "bar";
+                applyBarWidth(bar, state.barWidth);
                 bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 wrapper.appendChild(bar);
                 return bar;
@@ -631,10 +642,19 @@
                 updateYAxis(state.axis, state.grid, state.scale);
             }
 
+            const layout = calculateBarLayout(state.wrapper, values.length);
+            if (Math.abs(layout.width - state.barWidth) > 0.1 || layout.gap !== state.gap) {
+                state.barWidth = layout.width;
+                state.gap = layout.gap;
+                state.wrapper.style.setProperty('--bar-gap', `${state.gap}px`);
+                state.bars.forEach(bar => applyBarWidth(bar, state.barWidth));
+            }
+
             if (values.length > state.bars.length) {
                 for (let i = state.bars.length; i < values.length; i++) {
                     const bar = document.createElement("div");
                     bar.className = "bar";
+                    applyBarWidth(bar, state.barWidth);
                     state.wrapper.appendChild(bar);
                     state.bars.push(bar);
                 }
@@ -647,9 +667,36 @@
 
             state.bars.forEach((bar, index) => {
                 const value = values[index] ?? 0;
+                applyBarWidth(bar, state.barWidth);
                 bar.style.height = calculateBarHeight(value, state.scale.max, wrapperHeight);
                 bar.classList.toggle("highlight", highlights.includes(index));
             });
+        }
+
+        function calculateBarLayout(wrapper, count) {
+            const rect = wrapper.getBoundingClientRect();
+            const wrapperWidth = rect.width || wrapper.clientWidth || 0;
+            if (count <= 0 || wrapperWidth <= 0) {
+                return { width: 0, gap: DEFAULT_BAR_GAP };
+            }
+
+            let gap = count > LARGE_BAR_COUNT_THRESHOLD ? 0 : DEFAULT_BAR_GAP;
+            let available = wrapperWidth - gap * Math.max(0, count - 1);
+            if (available < 0) {
+                gap = 0;
+                available = wrapperWidth;
+            }
+
+            const width = available / count;
+            return {
+                width: Math.max(width, 0),
+                gap
+            };
+        }
+
+        function applyBarWidth(bar, width) {
+            const safeWidth = Math.max(width, 0);
+            bar.style.setProperty('--bar-width', `${safeWidth}px`);
         }
 
         function updateYAxis(axisEl, gridEl, scale) {
@@ -725,7 +772,8 @@
 
         function calculateBarHeight(value, maxScale, availableHeight) {
             const normalized = maxScale === 0 ? 0 : value / maxScale;
-            const height = Math.max(12, normalized * availableHeight);
+            const maxDrawable = Math.max(availableHeight - 4, 12);
+            const height = Math.max(12, Math.min(normalized * availableHeight, maxDrawable));
             return `${height}px`;
         }
 
