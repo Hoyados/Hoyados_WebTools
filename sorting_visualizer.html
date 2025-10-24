@@ -55,7 +55,7 @@
             gap: 6px;
         }
         .controls input[type="number"] {
-            width: 90px;
+            width: 80px;
             padding: 4px 6px;
         }
         button {
@@ -116,8 +116,8 @@
             display: none;
         }
         .panels {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 16px;
         }
         .panel {
@@ -146,33 +146,32 @@
             position: relative;
             flex: 1;
             display: flex;
-            align-items: stretch;
-            justify-content: stretch;
-            height: 240px;
-            padding: 24px 18px 34px 58px;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 1px;
+            height: 220px;
+            padding: 12px;
             background-color: #f6f8fb;
             border-radius: 8px;
             border: 1px solid #e3e9f5;
-            overflow: hidden;
         }
         .bars-wrapper {
             position: absolute;
-            left: 58px;
-            right: 18px;
-            top: 24px;
-            bottom: 34px;
+            left: 42px;
+            right: 0;
+            top: 12px;
+            bottom: 12px;
             display: flex;
             align-items: flex-end;
             justify-content: flex-start;
-            gap: 2px;
-            overflow: hidden;
+            gap: 1px;
         }
         .y-axis {
             position: absolute;
-            left: 16px;
-            top: 24px;
-            bottom: 34px;
-            width: 36px;
+            left: 10px;
+            top: 12px;
+            bottom: 12px;
+            width: 32px;
             font-size: 11px;
             color: #5d6c8b;
             pointer-events: none;
@@ -186,14 +185,14 @@
             transform: translateY(-50%);
         }
         .y-tick.bottom {
-            transform: translateY(0);
+            transform: translateY(0%);
         }
         .y-grid {
             position: absolute;
-            left: 58px;
-            right: 18px;
-            top: 24px;
-            bottom: 34px;
+            left: 42px;
+            right: 0;
+            top: 12px;
+            bottom: 12px;
             pointer-events: none;
         }
         .y-line {
@@ -203,9 +202,8 @@
             border-top: 1px dashed #d6e0f5;
         }
         .bar {
-            flex: 0 0 6px;
-            width: 6px;
-            min-height: 12px;
+            flex: 1;
+            min-width: 6px;
             border-radius: 4px 4px 0 0;
             background: linear-gradient(180deg, #7aa6ff, #3c6fe7);
             transition: height 0.13s ease, background-color 0.13s ease;
@@ -293,7 +291,7 @@
         const MAX_ALGORITHMS = 5;
         const MAX_ELEMENTS = 100;
         const MAX_BAR_VALUE = 100;
-        const MAX_CHART_HEIGHT = 200;
+        const MAX_CHART_HEIGHT = 196;
         const algorithms = {
             bubble: { key: "bubble", label: "バブルソート", generator: bubbleSortSteps },
             insertion: { key: "insertion", label: "挿入ソート", generator: insertionSortSteps },
@@ -331,19 +329,23 @@
             speedRange.addEventListener("input", () => {
                 speedValue.textContent = speedRange.value + "ms";
             });
-            randomizeBtn.addEventListener("click", () => {
-                generateNewArray();
-                updateSequenceDisplay();
-                panelsContainer.innerHTML = "";
-            });
-            elementCountInput.addEventListener("change", () => {
-                clampElementCount();
-                generateNewArray();
-                updateSequenceDisplay();
-                panelsContainer.innerHTML = "";
-            });
+            randomizeBtn.addEventListener("click", handleRandomize);
+            elementCountInput.addEventListener("change", handleElementChange);
             startBtn.addEventListener("click", startVisualization);
             stopBtn.addEventListener("click", stopAllRuns);
+        }
+
+        function handleRandomize() {
+            generateNewArray();
+            updateSequenceDisplay();
+            panelsContainer.innerHTML = "";
+        }
+
+        function handleElementChange() {
+            clampElementCount();
+            generateNewArray();
+            updateSequenceDisplay();
+            panelsContainer.innerHTML = "";
         }
 
         function renderAlgorithmOptions() {
@@ -363,7 +365,7 @@
 
         function clampElementCount() {
             const min = parseInt(elementCountInput.min, 10);
-            const max = parseInt(elementCountInput.max, 10);
+            const max = Math.min(parseInt(elementCountInput.max, 10), MAX_ELEMENTS);
             let value = parseInt(elementCountInput.value, 10);
             if (Number.isNaN(value)) value = min;
             value = Math.min(Math.max(value, min), max);
@@ -475,7 +477,6 @@
             timerController.start();
 
             const barsState = createBars(barsContainer, steps[0]?.array || array);
-
             let timedOut = false;
             let forcedStop = false;
             const timeoutAt = performance.now() + timeoutMs;
@@ -485,7 +486,6 @@
                     forcedStop = true;
                     break;
                 }
-
                 const step = steps[i];
                 updateBars(barsState, step.array, step.highlights);
 
@@ -501,12 +501,12 @@
 
                 if (i < steps.length - 1) {
                     await wait(delay);
-                    if (performance.now() > timeoutAt) {
-                        timedOut = true;
-                        break;
-                    }
                     if (controller.cancelled) {
                         forcedStop = true;
+                        break;
+                    }
+                    if (performance.now() > timeoutAt) {
+                        timedOut = true;
                         break;
                     }
                 }
@@ -514,12 +514,9 @@
 
             timerController.stop();
 
-            if (controller.cancelled || forcedStop) {
+            if (forcedStop || controller.cancelled) {
                 statusEl.textContent = "強制停止しました。";
-                return;
-            }
-
-            if (timedOut) {
+            } else if (timedOut) {
                 statusEl.textContent = `タイムアウト(${timeoutMinutes}分)しました。描画を停止しました。`;
             } else {
                 statusEl.textContent = `完了 (${timerController.elapsedMs.toFixed(0)}ms / ステップ生成 ${generationTime.toFixed(1)}ms)`;
@@ -619,6 +616,7 @@
             const ticks = [MAX_BAR_VALUE, 75, 50, 25, 0];
             axisEl.innerHTML = "";
             gridEl.innerHTML = "";
+
             ticks.forEach((value, idx) => {
                 const ratio = value / MAX_BAR_VALUE;
                 const tick = document.createElement("div");
