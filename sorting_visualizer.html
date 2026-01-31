@@ -495,13 +495,13 @@
             <div class="left-column">
                 <div class="controls">
                     <label for="elementCount">要素数:
-                        <input type="number" id="elementCount" min="5" max="10000" value="20">
+                        <input type="number" id="elementCount" min="5" max="3000" value="20">
                     </label>
                     <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
                 </div>
                 <div class="note">
                     <div>・アニメーション可能なのは1000要素までです。</div>
-                    <div>・要素数が大きい場合、O(n²)系（バブル/選択/挿入）は生成・描画が極端に遅くなります。</div>
+                    <div>・要素数が大きい場合（目安: 200以上）、O(n²)系（バブル/選択/挿入）は生成・描画が極端に遅くなります。</div>
                     <div>・可視化用ステップ生成のため、アルゴリズムの純粋な計算時間とは一致しません。</div>
                     <div>・生成時間はms単位での丸めです。</div>
                 </div>
@@ -512,11 +512,11 @@
                 </div>
 
                 <div class="legend">
-                    <strong>ハイライト凡例</strong>
+                    <strong title="色分けは比較・書き込み・ピボット位置を示します。マウスを合わせると説明が表示されます。">ハイライト凡例</strong>
                     <div class="legend-items">
-                        <span class="legend-item"><span class="legend-swatch compare"></span>比較/走査</span>
-                        <span class="legend-item"><span class="legend-swatch write"></span>交換/書き込み</span>
-                        <span class="legend-item"><span class="legend-swatch pivot"></span>ピボット</span>
+                        <span class="legend-item" title="配列の値を比較・走査している箇所です。"><span class="legend-swatch compare"></span>比較/走査</span>
+                        <span class="legend-item" title="要素の入れ替えや値の書き込みが起きた箇所です。"><span class="legend-swatch write"></span>交換/書き込み</span>
+                        <span class="legend-item" title="クイックソートなどのピボット（基準値）を示します。"><span class="legend-swatch pivot"></span>ピボット</span>
                     </div>
                 </div>
 
@@ -607,7 +607,7 @@
 
     <script>
         const MAX_ALGORITHMS = 5;
-        const MAX_ELEMENTS = 10000;
+        const MAX_ELEMENTS = 3000;
         const ANIMATION_LIMIT = 1000;
         const AXIS_LINE_WIDTH = 1;
         const algorithms = {
