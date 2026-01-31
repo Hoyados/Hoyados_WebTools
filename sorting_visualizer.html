@@ -30,9 +30,10 @@
             color: var(--text);
         }
         .container {
-            max-width: 1200px;
-            margin: 28px auto 48px;
-            padding: 24px 24px 40px;
+            max-width: 1600px;
+            width: min(96vw, 1600px);
+            margin: 24px auto 48px;
+            padding: 28px 28px 44px;
             background: var(--panel);
             border-radius: 18px;
             box-shadow: 0 24px 60px rgba(7, 9, 24, 0.55);
@@ -77,11 +78,12 @@
         }
         .layout {
             display: grid;
-            grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-            gap: 20px;
+            grid-template-columns: minmax(240px, 320px) minmax(0, 1.4fr) minmax(260px, 340px);
+            gap: 22px;
             align-items: start;
         }
         .left-column,
+        .middle-column,
         .right-column {
             min-width: 0;
         }
@@ -153,7 +155,8 @@
         }
         .legend,
         .info-card,
-        .summary-card {
+        .summary-card,
+        .array-card {
             background-color: var(--panel);
             padding: 12px 16px;
             border-radius: 12px;
@@ -256,7 +259,7 @@
             gap: 6px;
         }
         #sequenceDisplay {
-            margin-top: 18px;
+            margin-top: 10px;
             font-family: "Courier New", Courier, monospace;
             background-color: rgba(10, 16, 34, 0.7);
             padding: 10px 14px;
@@ -290,7 +293,7 @@
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
-            min-height: 200px;
+            min-height: 240px;
         }
         .panel-header {
             display: flex;
@@ -310,7 +313,7 @@
             position: relative;
             flex: 1;
             display: block;
-            height: 150px;
+            height: 190px;
             padding: 12px;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
             border-radius: 10px;
@@ -442,7 +445,7 @@
             font-size: 12px;
             color: var(--muted);
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1180px) {
             .layout {
                 grid-template-columns: 1fr;
             }
@@ -471,8 +474,6 @@
                     <label for="elementCount">要素数:
                         <input type="number" id="elementCount" min="5" max="400" value="20">
                     </label>
-                    <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
-                    <span class="note">※配列は選択したソートで共有されます</span>
                 </div>
 
                 <div class="algorithms">
@@ -514,7 +515,9 @@
                         </table>
                     </div>
                 </div>
+            </div>
 
+            <div class="middle-column">
                 <div class="actions">
                     <button id="startBtn">ソートを開始</button>
                     <button id="stopBtn" class="secondary" disabled>強制停止</button>
@@ -536,6 +539,8 @@
                 </div>
 
                 <div id="alert" class="alert hidden"></div>
+
+                <div id="panels" class="panels"></div>
             </div>
 
             <div class="right-column">
@@ -548,14 +553,14 @@
                         <table class="summary-table">
                             <thead>
                                 <tr>
-                                    <th>アルゴリズム</th>
-                                    <th>状態</th>
-                                    <th>時間</th>
-                                    <th>ステップ</th>
-                                    <th>比較</th>
-                                    <th>交換</th>
-                                    <th>書き込み</th>
-                                    <th>生成時間</th>
+                                    <th title="対象のアルゴリズム名">アルゴリズム</th>
+                                    <th title="現在の実行ステータス">状態</th>
+                                    <th title="可視化完了までの実測時間">時間</th>
+                                    <th title="描画されたステップ数">ステップ</th>
+                                    <th title="要素同士を見比べた回数です。値の大小を確認した回数と考えると分かりやすいです。">比較</th>
+                                    <th title="2つの要素を入れ替えた回数です。位置を交換した回数を示します。">交換</th>
+                                    <th title="配列の値を書き換えた回数です。上書きや挿入の回数を数えています。">書き込み</th>
+                                    <th title="ソート手順（アニメーション用のステップ）を作成するのにかかった時間です。描画時間とは別に計測しています。">生成時間</th>
                                 </tr>
                             </thead>
                             <tbody id="summaryBody"></tbody>
@@ -563,11 +568,16 @@
                     </div>
                 </div>
 
-                <div id="panels" class="panels"></div>
+                <div class="array-card">
+                    <div class="summary-header">
+                        <strong>ランダム配列</strong>
+                        <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
+                    </div>
+                    <p class="note">※配列は選択したソートで共有されます</p>
+                    <div id="sequenceDisplay"></div>
+                </div>
             </div>
         </div>
-
-        <div id="sequenceDisplay"></div>
     </div>
 
     <script>
