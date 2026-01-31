@@ -5,37 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ソートアルゴリズム可視化ツール</title>
     <style>
+        :root {
+            color-scheme: light;
+            --bg: #0f1628;
+            --panel: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.14);
+            --text: #e9edf7;
+            --muted: #c4cbe1;
+            --accent: #4be3ff;
+            --accent-strong: #8b7bff;
+            --outline: rgba(255, 255, 255, 0.1);
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            background: #f7f9fc;
+            font-family: "Segoe UI", "Noto Sans JP", "Hiragino Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(75, 227, 255, 0.22), transparent 45%),
+                radial-gradient(circle at top right, rgba(139, 123, 255, 0.2), transparent 45%),
+                #0b1020;
             margin: 0;
             padding: 0;
-            color: #1f2a44;
+            color: var(--text);
         }
         .container {
             max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px 24px 40px;
+            margin: 28px auto 48px;
+            padding: 24px 24px 40px;
+            background: var(--panel);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(7, 9, 24, 0.55);
+            backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(130deg, rgba(75, 227, 255, 0.6), rgba(139, 123, 255, 0.45), transparent 60%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
         }
         .back-link {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             margin-bottom: 20px;
-            padding: 6px 14px;
-            border-radius: 6px;
-            background-color: #f0f4ff;
-            color: #1a4fbf;
+            padding: 8px 18px;
+            border-radius: 999px;
+            background-color: rgba(255, 255, 255, 0.12);
+            color: var(--text);
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
+            transition: background 0.2s ease, transform 0.2s ease;
         }
         .back-link:hover {
-            background-color: #d9e4ff;
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
         }
         h1 {
             margin: 0 0 12px;
         }
         p.description {
             margin-top: 0;
-            color: #4b5567;
+            color: var(--muted);
         }
         .layout {
             display: grid;
@@ -53,10 +91,11 @@
             gap: 12px;
             align-items: center;
             margin-bottom: 16px;
-            background-color: #fff;
+            background-color: var(--panel);
             padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px var(--outline);
+            backdrop-filter: blur(6px);
         }
         .controls label,
         .actions label {
@@ -66,38 +105,59 @@
         }
         .controls input[type="number"] {
             width: 80px;
-            padding: 4px 6px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            background: var(--panel-strong);
+            color: var(--text);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+        .controls input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(75, 227, 255, 0.3);
+        }
+        .note {
+            font-size: 13px;
+            color: var(--muted);
         }
         button {
             padding: 8px 14px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            background-color: #4a90e2;
-            color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #08111f;
             font-weight: bold;
+            letter-spacing: 0.03em;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(79, 200, 255, 0.35);
         }
         button:disabled {
-            background-color: #9fbbe0;
+            background-color: rgba(255, 255, 255, 0.2);
             cursor: not-allowed;
         }
         button.secondary {
-            background-color: #6b7a99;
+            background: rgba(255, 255, 255, 0.18);
+            color: var(--text);
         }
         .algorithms {
-            background-color: #fff;
+            background-color: var(--panel);
             padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px var(--outline);
             margin-bottom: 16px;
         }
         .legend,
         .info-card,
         .summary-card {
-            background-color: #fff;
+            background-color: var(--panel);
             padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px var(--outline);
             margin-bottom: 16px;
         }
         .legend-items {
@@ -111,14 +171,14 @@
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            color: #4b5567;
+            color: var(--muted);
         }
         .legend-swatch {
             width: 14px;
             height: 14px;
             border-radius: 4px;
             display: inline-block;
-            border: 1px solid #c8d4ea;
+            border: 1px solid rgba(255, 255, 255, 0.25);
         }
         .legend-swatch.compare {
             background: linear-gradient(180deg, #ffd28a 0%, #ff9f40 60%, #f76b1c 100%);
@@ -138,7 +198,7 @@
         }
         .info-filter {
             font-size: 13px;
-            color: #4b5567;
+            color: var(--muted);
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -160,29 +220,29 @@
         .summary-table td {
             text-align: left;
             padding: 6px 8px;
-            border-bottom: 1px solid #e5ecf7;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
             white-space: nowrap;
         }
         .info-table thead th,
         .summary-table thead th {
-            background-color: #f3f7ff;
+            background-color: rgba(255, 255, 255, 0.08);
             font-size: 12px;
-            color: #4b5567;
+            color: var(--muted);
         }
         .info-table tbody tr.selected {
-            background-color: #f0f6ff;
+            background-color: rgba(75, 227, 255, 0.12);
         }
         .summary-table tbody tr.running {
-            background-color: #f7fbff;
+            background-color: rgba(75, 227, 255, 0.08);
         }
         .summary-table tbody tr.done {
-            background-color: #f1fff6;
+            background-color: rgba(106, 255, 185, 0.1);
         }
         .summary-table tbody tr.timeout {
-            background-color: #fff3e6;
+            background-color: rgba(255, 173, 100, 0.12);
         }
         .summary-table tbody tr.stopped {
-            background-color: #ffecec;
+            background-color: rgba(255, 130, 130, 0.12);
         }
         .algorithm-options {
             display: flex;
@@ -198,10 +258,10 @@
         #sequenceDisplay {
             margin-top: 18px;
             font-family: "Courier New", Courier, monospace;
-            background-color: #fff;
+            background-color: rgba(10, 16, 34, 0.7);
             padding: 10px 14px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
             min-height: 38px;
             display: flex;
             align-items: center;
@@ -209,8 +269,8 @@
             gap: 6px;
         }
         .alert {
-            background-color: #ffe1e1;
-            color: #8a1c1c;
+            background-color: rgba(255, 130, 130, 0.2);
+            color: #ffd7d7;
             padding: 8px 12px;
             border-radius: 6px;
             margin-bottom: 16px;
@@ -224,10 +284,10 @@
             gap: 16px;
         }
         .panel {
-            background-color: #fff;
+            background-color: rgba(10, 16, 34, 0.75);
             padding: 14px 16px 18px;
             border-radius: 10px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
             display: flex;
             flex-direction: column;
             min-height: 200px;
@@ -244,7 +304,7 @@
         }
         .timer {
             font-size: 14px;
-            color: #4b5567;
+            color: var(--muted);
         }
         .bars {
             position: relative;
@@ -252,10 +312,10 @@
             display: block;
             height: 150px;
             padding: 12px;
-            background: linear-gradient(180deg, #f9fbff 0%, #eef3fb 100%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
             border-radius: 10px;
-            border: 1px solid #d6e0f2;
-            box-shadow: inset 0 1px 2px rgba(31, 42, 68, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: inset 0 1px 2px rgba(31, 42, 68, 0.18);
             overflow: hidden;
         }
         .bars::after {
@@ -289,7 +349,7 @@
             bottom: 12px;
             width: 32px;
             font-size: 11px;
-            color: #5d6c8b;
+            color: var(--muted);
             pointer-events: none;
             display: flex;
             flex-direction: column;
@@ -317,7 +377,7 @@
         .y-line {
             position: relative;
             width: 100%;
-            border-top: 1px dashed #c8d4ea;
+            border-top: 1px dashed rgba(255, 255, 255, 0.18);
         }
         .y-line.bottom {
             border-top-color: transparent;
@@ -347,7 +407,7 @@
             margin-top: 10px;
             min-height: 18px;
             font-size: 14px;
-            color: #4b5567;
+            color: var(--muted);
         }
         .metrics {
             display: grid;
@@ -355,17 +415,17 @@
             gap: 8px;
             margin-top: 10px;
             font-size: 12px;
-            color: #4b5567;
+            color: var(--muted);
         }
         .metrics span {
-            background-color: #f3f6fb;
+            background-color: rgba(255, 255, 255, 0.08);
             padding: 4px 6px;
             border-radius: 6px;
         }
         .progress {
             margin-top: 6px;
             font-size: 12px;
-            color: #6b7a99;
+            color: var(--muted);
         }
         .actions input[type="range"] {
             width: 160px;
@@ -373,14 +433,14 @@
         .actions select {
             padding: 4px 6px;
             border-radius: 4px;
-            border: 1px solid #c3cde4;
-            background-color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background-color: rgba(10, 16, 34, 0.7);
             font-size: 14px;
-            color: #1f2a44;
+            color: var(--text);
         }
         .speed-label span {
             font-size: 12px;
-            color: #4b5567;
+            color: var(--muted);
         }
         @media (max-width: 900px) {
             .layout {
@@ -412,7 +472,7 @@
                         <input type="number" id="elementCount" min="5" max="400" value="20">
                     </label>
                     <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
-                    <span style="font-size:13px;color:#6b7a99;">※配列は選択したソートで共有されます</span>
+                    <span class="note">※配列は選択したソートで共有されます</span>
                 </div>
 
                 <div class="algorithms">
@@ -719,8 +779,8 @@
                 span.textContent = value;
                 span.style.padding = "4px 6px";
                 span.style.borderRadius = "4px";
-                span.style.backgroundColor = "#eef3ff";
-                span.style.color = "#2b3d6b";
+                span.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
+                span.style.color = "#e9edf7";
                 sequenceDisplay.appendChild(span);
             });
         }
