@@ -5,37 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoyados personal tools</title>
     <style>
+        :root {
+            color-scheme: light;
+            --bg: #0f1628;
+            --panel: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.14);
+            --text: #e9edf7;
+            --muted: #c4cbe1;
+            --accent: #4be3ff;
+            --accent-strong: #8b7bff;
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f7f9fc;
+            font-family: "Segoe UI", "Noto Sans JP", "Hiragino Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(75, 227, 255, 0.22), transparent 45%),
+                radial-gradient(circle at top right, rgba(139, 123, 255, 0.2), transparent 45%),
+                #0b1020;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            color: var(--text);
+            text-align: center;
         }
         .container {
+            width: min(560px, 90vw);
             text-align: center;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 28px 24px;
+            background-color: var(--panel);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(7, 9, 24, 0.55);
+            backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(130deg, rgba(75, 227, 255, 0.6), rgba(139, 123, 255, 0.45), transparent 60%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .link-list {
+            display: grid;
+            gap: 14px;
         }
         a {
             text-decoration: none;
-            color: #4a90e2;
-            font-size: 18px;
-            transition: color 0.3s;
+            color: #08111f;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 12px 18px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 10px 20px rgba(5, 10, 24, 0.4);
         }
         a:hover {
-            color: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(79, 200, 255, 0.35);
+        }
+        .caption {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: var(--muted);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div><a href="ddr_flare_gauge.html">DDRフレアゲージ計算機</a></div>
-        <div style="margin-top:12px;"><a href="sorting_visualizer.html">ソートアルゴリズム可視化ツール</a></div>
+        <div class="link-list">
+            <a href="ddr_flare_gauge.html">DDRフレアゲージ計算機</a>
+            <a href="sorting_visualizer.html">ソートアルゴリズム可視化ツール</a>
+        </div>
+        <div class="caption">Hoyados personal tools</div>
     </div>
 </body>
 </html>
