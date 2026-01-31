@@ -495,9 +495,15 @@
             <div class="left-column">
                 <div class="controls">
                     <label for="elementCount">要素数:
-                        <input type="number" id="elementCount" min="5" max="400" value="20">
+                        <input type="number" id="elementCount" min="5" max="10000" value="20">
                     </label>
                     <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
+                </div>
+                <div class="note">
+                    <div>・アニメーション可能なのは1000要素までです。</div>
+                    <div>・要素数が大きい場合、O(n²)系（バブル/選択/挿入）は生成・描画が極端に遅くなります。</div>
+                    <div>・可視化用ステップ生成のため、アルゴリズムの純粋な計算時間とは一致しません。</div>
+                    <div>・生成時間はms単位での丸めです。</div>
                 </div>
 
                 <div class="algorithms">
@@ -601,7 +607,8 @@
 
     <script>
         const MAX_ALGORITHMS = 5;
-        const MAX_ELEMENTS = 400;
+        const MAX_ELEMENTS = 10000;
+        const ANIMATION_LIMIT = 1000;
         const AXIS_LINE_WIDTH = 1;
         const algorithms = {
             bubble: {
@@ -830,6 +837,7 @@
             const delay = parseInt(speedRange.value, 10);
             const timeoutMinutes = parseInt(timeoutSelect.value, 10);
             const timeoutMs = timeoutMinutes * 60000;
+            const shouldSkipAnimation = arrayClone.length > ANIMATION_LIMIT;
 
             panelsContainer.innerHTML = "";
             panelsContainer.classList.toggle("multi", selectedKeys.length > 1);
@@ -847,6 +855,9 @@
             const tasks = selectedKeys.map(key => {
                 const controller = createRunController();
                 activeRunControllers.push(controller);
+                if (shouldSkipAnimation) {
+                    return runSummaryOnlyForAlgorithm(key, arrayClone, controller, summaryRows[key]);
+                }
                 return runVisualizationForAlgorithm(key, arrayClone, delay, timeoutMs, timeoutMinutes, controller, summaryRows[key]);
             });
 
@@ -1000,6 +1011,46 @@
                     summaryRow.statusEl.textContent = "完了";
                     summaryRow.row.classList.add("done");
                 }
+            }
+        }
+
+        async function runSummaryOnlyForAlgorithm(key, baseArray, controller, summaryRow) {
+            const algo = algorithms[key];
+            if (summaryRow) {
+                summaryRow.statusEl.textContent = "生成中";
+                summaryRow.row.classList.add("running");
+            }
+
+            const array = [...baseArray];
+            const stepsStart = performance.now();
+            let stepsResult;
+            try {
+                stepsResult = algo.generator(array);
+            } catch (err) {
+                if (summaryRow) {
+                    summaryRow.statusEl.textContent = "生成失敗";
+                    summaryRow.row.classList.remove("running");
+                    summaryRow.row.classList.add("stopped");
+                }
+                console.error(err);
+                return;
+            }
+
+            const normalized = normalizeGeneratorResult(stepsResult, array);
+            const steps = normalized.steps;
+            const metrics = normalized.metrics;
+            const generationTime = performance.now() - stepsStart;
+
+            if (summaryRow) {
+                summaryRow.stepsEl.textContent = steps.length.toString();
+                summaryRow.comparisonsEl.textContent = metrics.comparisons;
+                summaryRow.swapsEl.textContent = metrics.swaps;
+                summaryRow.writesEl.textContent = metrics.writes;
+                summaryRow.generationEl.textContent = formatDuration(generationTime);
+                summaryRow.timeEl.textContent = "-";
+                summaryRow.statusEl.textContent = controller.cancelled ? "強制停止" : "生成のみ";
+                summaryRow.row.classList.remove("running");
+                summaryRow.row.classList.add(controller.cancelled ? "stopped" : "done");
             }
         }
 
