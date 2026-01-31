@@ -78,12 +78,11 @@
         }
         .layout {
             display: grid;
-            grid-template-columns: minmax(240px, 320px) minmax(0, 1.4fr) minmax(260px, 340px);
+            grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
             gap: 22px;
             align-items: start;
         }
         .left-column,
-        .middle-column,
         .right-column {
             min-width: 0;
         }
@@ -246,6 +245,16 @@
         }
         .summary-table tbody tr.stopped {
             background-color: rgba(255, 130, 130, 0.12);
+        }
+        .summary-table-wrap {
+            overflow-x: visible;
+        }
+        .summary-table {
+            table-layout: fixed;
+        }
+        .summary-table th,
+        .summary-table td {
+            white-space: normal;
         }
         .algorithm-options {
             display: flex;
@@ -445,6 +454,20 @@
             font-size: 12px;
             color: var(--muted);
         }
+        details.array-card > summary {
+            cursor: pointer;
+            font-weight: 600;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        details.array-card > summary::-webkit-details-marker {
+            display: none;
+        }
+        details.array-card[open] > summary {
+            margin-bottom: 10px;
+        }
         @media (max-width: 1180px) {
             .layout {
                 grid-template-columns: 1fr;
@@ -474,6 +497,7 @@
                     <label for="elementCount">要素数:
                         <input type="number" id="elementCount" min="5" max="400" value="20">
                     </label>
+                    <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
                 </div>
 
                 <div class="algorithms">
@@ -515,9 +539,15 @@
                         </table>
                     </div>
                 </div>
+
+                <details class="array-card">
+                    <summary>ランダム配列</summary>
+                    <p class="note">※配列は選択したソートで共有されます</p>
+                    <div id="sequenceDisplay"></div>
+                </details>
             </div>
 
-            <div class="middle-column">
+            <div class="right-column">
                 <div class="actions">
                     <button id="startBtn">ソートを開始</button>
                     <button id="stopBtn" class="secondary" disabled>強制停止</button>
@@ -540,10 +570,6 @@
 
                 <div id="alert" class="alert hidden"></div>
 
-                <div id="panels" class="panels"></div>
-            </div>
-
-            <div class="right-column">
                 <div class="summary-card">
                     <div class="summary-header">
                         <strong>比較サマリー</strong>
@@ -568,14 +594,7 @@
                     </div>
                 </div>
 
-                <div class="array-card">
-                    <div class="summary-header">
-                        <strong>ランダム配列</strong>
-                        <button id="randomizeBtn" class="secondary">ランダム配列生成</button>
-                    </div>
-                    <p class="note">※配列は選択したソートで共有されます</p>
-                    <div id="sequenceDisplay"></div>
-                </div>
+                <div id="panels" class="panels"></div>
             </div>
         </div>
     </div>
