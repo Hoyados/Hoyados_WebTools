@@ -5,11 +5,13 @@
 
 - DDR flare gauge allowable checker (`ddr_flare_gauge.html`)
 - Sorting Visualizer (`sorting_visualizer.html`)
+- CSV 自動ダッシュボード (`csv_dashboard.html`)
 
 ## HTML ファイルの説明
 - `index.html`: ツール一覧への入口となるトップページです。
 - `ddr_flare_gauge.html`: DDR のフレアゲージ可否を確認する計算ツールです。
 - `sorting_visualizer.html`: ソートアルゴリズムの挙動を可視化するデモページです。
+- `csv_dashboard.html`: CSV を読み込んでヘッダに紐づくデータを可視化するダッシュボードです。
 
 ## 使い方
 1. このリポジトリをクローンまたはダウンロードします。
@@ -22,6 +24,7 @@
 ├── README.md
 ├── index.html
 ├── ddr_flare_gauge.html
+├── csv_dashboard.html
 └── sorting_visualizer.html
 ```
 
