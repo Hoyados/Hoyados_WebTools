@@ -179,6 +179,13 @@
             .container {
                 padding: 20px;
             }
+            .actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -195,7 +202,7 @@
                 <h2>1. MP4ファイルを選択</h2>
                 <label>
                     動画ファイル
-                    <input type="file" id="videoInput" accept="video/mp4" />
+                    <input type="file" id="videoInput" accept="video/mp4,video/*" />
                 </label>
                 <p class="note">推奨: 30秒以内 / 50MB以下（ブラウザ負荷を下げるため）</p>
             </section>
@@ -241,8 +248,9 @@
 
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
     <script>
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        const ffmpegModule = window.FFmpeg;
+        const ffmpeg = ffmpegModule ? ffmpegModule.createFFmpeg({ log: true }) : null;
+        const fetchFile = ffmpegModule ? ffmpegModule.fetchFile : null;
 
         const elements = {
             videoInput: document.getElementById("videoInput"),
@@ -282,7 +290,7 @@
         };
 
         elements.videoInput.addEventListener("change", (event) => {
-            const [file] = event.target.files;
+            const file = event.target.files ? event.target.files[0] : null;
             currentFile = file || null;
             resetOutput();
             if (currentFile) {
@@ -305,6 +313,10 @@
 
         elements.convertButton.addEventListener("click", async () => {
             if (!currentFile) {
+                return;
+            }
+            if (!ffmpeg || !fetchFile) {
+                setStatus("FFmpegライブラリの読み込みに失敗しました。ネットワーク状況を確認してください。", true);
                 return;
             }
             resetOutput();
