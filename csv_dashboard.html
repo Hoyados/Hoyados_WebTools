@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 自動ダッシュボード</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #0f1628;
+            --panel: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.14);
+            --text: #e9edf7;
+            --muted: #c4cbe1;
+            --accent: #4be3ff;
+            --accent-strong: #8b7bff;
+            --danger: #ff7b7b;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Segoe UI", "Noto Sans JP", "Hiragino Sans", sans-serif;
+            margin: 0;
+            background:
+                radial-gradient(circle at top left, rgba(75, 227, 255, 0.22), transparent 45%),
+                radial-gradient(circle at top right, rgba(139, 123, 255, 0.2), transparent 45%),
+                #0b1020;
+            color: var(--text);
+            min-height: 100vh;
+        }
+        header {
+            padding: 32px 24px 12px;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.6rem, 2vw + 1rem, 2.4rem);
+        }
+        header p {
+            margin: 0;
+            color: var(--muted);
+        }
+        main {
+            max-width: 1100px;
+            margin: 0 auto 64px;
+            padding: 0 24px;
+            display: grid;
+            gap: 20px;
+        }
+        .panel {
+            background: var(--panel);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 18px 40px rgba(7, 9, 24, 0.55);
+            backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(130deg, rgba(75, 227, 255, 0.6), rgba(139, 123, 255, 0.45), transparent 60%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        .panel h2 {
+            margin-top: 0;
+        }
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+        .grid.two {
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        }
+        .input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            font-weight: 600;
+        }
+        input[type="file"], select, textarea, button {
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(5, 10, 24, 0.7);
+            color: var(--text);
+            padding: 10px 12px;
+            font-size: 0.95rem;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        button {
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #08111f;
+            font-weight: 700;
+            border: none;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(75, 227, 255, 0.2);
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .status {
+            margin-top: 8px;
+            color: var(--muted);
+        }
+        .status.error {
+            color: var(--danger);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            text-align: left;
+        }
+        th {
+            color: var(--muted);
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 360px;
+        }
+        .muted {
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>CSV 自動ダッシュボード</h1>
+        <p>CSV を読み込むとヘッダとカラムを解釈し、表とグラフで可視化します。</p>
+    </header>
+    <main>
+        <section class="panel">
+            <h2>1. CSV の取り込み</h2>
+            <div class="grid two">
+                <div class="input-row">
+                    <label for="csvFile">CSV ファイル</label>
+                    <input type="file" id="csvFile" accept=".csv,text/csv" />
+                    <button id="loadFileButton" type="button">ファイルを解析</button>
+                </div>
+                <div class="input-row">
+                    <label for="csvText">CSV テキストを貼り付け</label>
+                    <textarea id="csvText" placeholder="ヘッダ行を含む CSV を貼り付けてください"></textarea>
+                    <button id="loadTextButton" type="button">テキストを解析</button>
+                </div>
+            </div>
+            <div class="summary" id="summary"></div>
+            <div class="status" id="status">CSV を読み込むと自動でカラム情報を解析します。</div>
+        </section>
+
+        <section class="panel">
+            <h2>2. カラム解釈</h2>
+            <p class="muted">ヘッダに紐づくデータ型を推定し、空欄数などの概要を表示します。</p>
+            <div id="columnInfo"></div>
+        </section>
+
+        <section class="panel">
+            <h2>3. 可視化</h2>
+            <div class="grid two">
+                <div class="input-row">
+                    <label for="xColumn">カテゴリ軸 (X)</label>
+                    <select id="xColumn"></select>
+                </div>
+                <div class="input-row">
+                    <label for="yColumn">数値軸 (Y)</label>
+                    <select id="yColumn"></select>
+                </div>
+                <div class="input-row">
+                    <label for="chartType">グラフ種別</label>
+                    <select id="chartType">
+                        <option value="bar">棒グラフ</option>
+                        <option value="line">折れ線</option>
+                    </select>
+                </div>
+                <div class="input-row">
+                    <label for="aggregate">集計方法</label>
+                    <select id="aggregate">
+                        <option value="sum">合計</option>
+                        <option value="average">平均</option>
+                    </select>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="chart"></canvas>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>4. データプレビュー</h2>
+            <p class="muted">最初の 50 行を表示します。</p>
+            <div id="dataPreview"></div>
+        </section>
+    </main>
+
+    <script>
+        const csvFile = document.getElementById('csvFile');
+        const csvText = document.getElementById('csvText');
+        const loadFileButton = document.getElementById('loadFileButton');
+        const loadTextButton = document.getElementById('loadTextButton');
+        const summary = document.getElementById('summary');
+        const status = document.getElementById('status');
+        const columnInfo = document.getElementById('columnInfo');
+        const dataPreview = document.getElementById('dataPreview');
+        const xColumn = document.getElementById('xColumn');
+        const yColumn = document.getElementById('yColumn');
+        const chartType = document.getElementById('chartType');
+        const aggregate = document.getElementById('aggregate');
+
+        let chartInstance = null;
+        let parsedData = [];
+        let columns = [];
+        let columnMeta = [];
+
+        const updateStatus = (message, isError = false) => {
+            status.textContent = message;
+            status.classList.toggle('error', isError);
+        };
+
+        const toNumber = (value) => {
+            if (value === null || value === undefined) return null;
+            const cleaned = String(value).replace(/,/g, '').trim();
+            if (cleaned === '') return null;
+            const numberValue = Number(cleaned);
+            return Number.isFinite(numberValue) ? numberValue : null;
+        };
+
+        const isDateLike = (value) => {
+            if (!value) return false;
+            const parsed = Date.parse(value);
+            return !Number.isNaN(parsed);
+        };
+
+        const inferType = (values) => {
+            const nonEmpty = values.filter((value) => String(value ?? '').trim() !== '');
+            if (nonEmpty.length === 0) return 'empty';
+
+            const numericCount = nonEmpty.filter((value) => toNumber(value) !== null).length;
+            const dateCount = nonEmpty.filter((value) => isDateLike(value)).length;
+
+            if (numericCount === nonEmpty.length) return 'number';
+            if (dateCount === nonEmpty.length) return 'date';
+            return 'text';
+        };
+
+        const buildColumnMeta = (data, fields) => {
+            return fields.map((field) => {
+                const values = data.map((row) => row[field]);
+                const nonEmpty = values.filter((value) => String(value ?? '').trim() !== '').length;
+                const empty = values.length - nonEmpty;
+                const type = inferType(values);
+                return { field, type, nonEmpty, empty };
+            });
+        };
+
+        const renderSummary = (data, fields) => {
+            summary.innerHTML = '';
+            const items = [
+                `行数: ${data.length}`,
+                `列数: ${fields.length}`
+            ];
+            items.forEach((text) => {
+                const pill = document.createElement('div');
+                pill.className = 'pill';
+                pill.textContent = text;
+                summary.appendChild(pill);
+            });
+        };
+
+        const renderColumnTable = (meta) => {
+            if (meta.length === 0) {
+                columnInfo.innerHTML = '<p class="muted">カラム情報がありません。</p>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>ヘッダ</th>
+                        <th>推定タイプ</th>
+                        <th>値あり</th>
+                        <th>空欄</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            meta.forEach((item) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.field}</td>
+                    <td>${item.type}</td>
+                    <td>${item.nonEmpty}</td>
+                    <td>${item.empty}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            columnInfo.innerHTML = '';
+            columnInfo.appendChild(table);
+        };
+
+        const renderPreview = (data, fields) => {
+            if (data.length === 0) {
+                dataPreview.innerHTML = '<p class="muted">データがありません。</p>';
+                return;
+            }
+            const previewData = data.slice(0, 50);
+            const table = document.createElement('table');
+            const headerRow = fields.map((field) => `<th>${field}</th>`).join('');
+            const bodyRows = previewData.map((row) => {
+                const cells = fields.map((field) => `<td>${row[field] ?? ''}</td>`).join('');
+                return `<tr>${cells}</tr>`;
+            }).join('');
+            table.innerHTML = `<thead><tr>${headerRow}</tr></thead><tbody>${bodyRows}</tbody>`;
+            dataPreview.innerHTML = '';
+            dataPreview.appendChild(table);
+        };
+
+        const populateSelectors = (fields, meta) => {
+            xColumn.innerHTML = '';
+            yColumn.innerHTML = '';
+            const numericFields = meta.filter((item) => item.type === 'number').map((item) => item.field);
+
+            fields.forEach((field) => {
+                const option = document.createElement('option');
+                option.value = field;
+                option.textContent = field;
+                xColumn.appendChild(option);
+            });
+
+            if (numericFields.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '数値カラムがありません';
+                yColumn.appendChild(option);
+                yColumn.disabled = true;
+            } else {
+                numericFields.forEach((field) => {
+                    const option = document.createElement('option');
+                    option.value = field;
+                    option.textContent = field;
+                    yColumn.appendChild(option);
+                });
+                yColumn.disabled = false;
+            }
+
+            xColumn.selectedIndex = 0;
+            yColumn.selectedIndex = 0;
+        };
+
+        const aggregateData = (data, xField, yField, mode) => {
+            const grouped = new Map();
+            data.forEach((row) => {
+                const xValue = String(row[xField] ?? '').trim();
+                if (!xValue) return;
+                const yValue = toNumber(row[yField]);
+                if (yValue === null) return;
+                const current = grouped.get(xValue) || { total: 0, count: 0 };
+                current.total += yValue;
+                current.count += 1;
+                grouped.set(xValue, current);
+            });
+
+            const labels = Array.from(grouped.keys());
+            const values = labels.map((label) => {
+                const entry = grouped.get(label);
+                if (!entry) return 0;
+                return mode === 'average' ? entry.total / entry.count : entry.total;
+            });
+            return { labels, values };
+        };
+
+        const renderChart = () => {
+            if (parsedData.length === 0 || !xColumn.value || !yColumn.value) {
+                if (chartInstance) {
+                    chartInstance.destroy();
+                    chartInstance = null;
+                }
+                return;
+            }
+            const { labels, values } = aggregateData(parsedData, xColumn.value, yColumn.value, aggregate.value);
+            const ctx = document.getElementById('chart');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: chartType.value,
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: `${yColumn.value} (${aggregate.value === 'average' ? '平均' : '合計'})`,
+                            data: values,
+                            borderColor: '#4be3ff',
+                            backgroundColor: 'rgba(75, 227, 255, 0.35)',
+                            fill: chartType.value === 'line',
+                            tension: 0.25
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#c4cbe1'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#c4cbe1'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#e9edf7'
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        const handleParseResult = (results) => {
+            if (results.errors.length) {
+                updateStatus('CSV の解析でエラーが発生しました。', true);
+            } else {
+                updateStatus('CSV を解析しました。');
+            }
+
+            parsedData = results.data;
+            columns = results.meta.fields || [];
+            columnMeta = buildColumnMeta(parsedData, columns);
+
+            renderSummary(parsedData, columns);
+            renderColumnTable(columnMeta);
+            renderPreview(parsedData, columns);
+            populateSelectors(columns, columnMeta);
+            renderChart();
+        };
+
+        const parseCsvFromFile = (file) => {
+            if (!window.Papa) {
+                updateStatus('CSV パーサーの読み込みに失敗しました。', true);
+                return;
+            }
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: handleParseResult,
+                error: () => {
+                    updateStatus('CSV の解析に失敗しました。', true);
+                }
+            });
+        };
+
+        const parseCsvFromString = (text) => {
+            if (!window.Papa) {
+                updateStatus('CSV パーサーの読み込みに失敗しました。', true);
+                return;
+            }
+
+            Papa.parse(text, {
+                header: true,
+                skipEmptyLines: true,
+                complete: handleParseResult,
+                error: () => {
+                    updateStatus('CSV の解析に失敗しました。', true);
+                }
+            });
+        };
+
+        loadFileButton.addEventListener('click', () => {
+            if (!csvFile.files.length) {
+                updateStatus('CSV ファイルを選択してください。', true);
+                return;
+            }
+            parseCsvFromFile(csvFile.files[0]);
+        });
+
+        loadTextButton.addEventListener('click', () => {
+            if (!csvText.value.trim()) {
+                updateStatus('CSV テキストを入力してください。', true);
+                return;
+            }
+            parseCsvFromString(csvText.value);
+        });
+
+        [xColumn, yColumn, chartType, aggregate].forEach((element) => {
+            element.addEventListener('change', renderChart);
+        });
+    </script>
+</body>
+</html>
