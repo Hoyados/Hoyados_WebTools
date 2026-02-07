@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP4 → GIF 変換ツール</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #0f1628;
+            --panel: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.16);
+            --text: #e9edf7;
+            --muted: #c4cbe1;
+            --accent: #4be3ff;
+            --accent-strong: #8b7bff;
+            --danger: #ff7676;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "Noto Sans JP", "Hiragino Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(75, 227, 255, 0.22), transparent 45%),
+                radial-gradient(circle at top right, rgba(139, 123, 255, 0.2), transparent 45%),
+                #0b1020;
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+        .container {
+            width: min(900px, 95vw);
+            background: var(--panel);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 24px 60px rgba(7, 9, 24, 0.55);
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(130deg, rgba(75, 227, 255, 0.6), rgba(139, 123, 255, 0.45), transparent 60%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        header {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin: 0;
+        }
+        .subtitle {
+            color: var(--muted);
+            margin: 0;
+        }
+        .grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+        .card {
+            background: var(--panel-strong);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        .card h2 {
+            font-size: 1rem;
+            margin: 0 0 12px 0;
+        }
+        label {
+            display: grid;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        input[type="file"],
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+        }
+        input[type="number"] {
+            appearance: textfield;
+        }
+        .button {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font-weight: 700;
+            color: #08111f;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 10px 20px rgba(5, 10, 24, 0.4);
+        }
+        .button:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            color: rgba(8, 17, 31, 0.7);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 16px 28px rgba(79, 200, 255, 0.35);
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .status {
+            font-size: 0.9rem;
+            color: var(--muted);
+            min-height: 24px;
+        }
+        .status.error {
+            color: var(--danger);
+        }
+        .preview {
+            display: grid;
+            gap: 12px;
+            align-content: start;
+        }
+        .preview img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .download {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .note {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+        .footer {
+            margin-top: 18px;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MP4 → GIF 変換ツール</h1>
+            <p class="subtitle">ブラウザ内で変換します。動画はアップロードされません。</p>
+        </header>
+
+        <div class="grid">
+            <section class="card">
+                <h2>1. MP4ファイルを選択</h2>
+                <label>
+                    動画ファイル
+                    <input type="file" id="videoInput" accept="video/mp4" />
+                </label>
+                <p class="note">推奨: 30秒以内 / 50MB以下（ブラウザ負荷を下げるため）</p>
+            </section>
+
+            <section class="card">
+                <h2>2. 出力設定</h2>
+                <label>
+                    開始秒 (例: 0)
+                    <input type="number" id="startTime" min="0" step="0.1" value="0" />
+                </label>
+                <label>
+                    変換秒数 (例: 3)
+                    <input type="number" id="duration" min="0.1" step="0.1" value="3" />
+                </label>
+                <label>
+                    幅 (px)
+                    <input type="number" id="width" min="80" step="10" value="480" />
+                </label>
+                <label>
+                    FPS
+                    <input type="number" id="fps" min="5" step="1" value="12" />
+                </label>
+                <label>
+                    ファイル名（拡張子不要）
+                    <input type="text" id="outputName" value="converted" />
+                </label>
+            </section>
+
+            <section class="card preview">
+                <h2>3. プレビュー & ダウンロード</h2>
+                <div class="actions">
+                    <button class="button" id="convertButton" disabled>GIFに変換</button>
+                    <button class="button" id="resetButton" disabled>リセット</button>
+                </div>
+                <div class="status" id="status">ファイルを選択してください。</div>
+                <a class="download" id="downloadLink" href="#" download hidden>GIFをダウンロード</a>
+                <img id="gifPreview" alt="GIFプレビュー" hidden />
+            </section>
+        </div>
+
+        <div class="footer">Powered by ffmpeg.wasm (in-browser)</div>
+    </div>
+
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        const elements = {
+            videoInput: document.getElementById("videoInput"),
+            startTime: document.getElementById("startTime"),
+            duration: document.getElementById("duration"),
+            width: document.getElementById("width"),
+            fps: document.getElementById("fps"),
+            outputName: document.getElementById("outputName"),
+            convertButton: document.getElementById("convertButton"),
+            resetButton: document.getElementById("resetButton"),
+            status: document.getElementById("status"),
+            downloadLink: document.getElementById("downloadLink"),
+            gifPreview: document.getElementById("gifPreview")
+        };
+
+        let currentFile = null;
+        let outputUrl = null;
+
+        const setStatus = (message, isError = false) => {
+            elements.status.textContent = message;
+            elements.status.classList.toggle("error", isError);
+        };
+
+        const resetOutput = () => {
+            if (outputUrl) {
+                URL.revokeObjectURL(outputUrl);
+                outputUrl = null;
+            }
+            elements.downloadLink.hidden = true;
+            elements.gifPreview.hidden = true;
+            elements.gifPreview.src = "";
+        };
+
+        const updateButtons = () => {
+            elements.convertButton.disabled = !currentFile;
+            elements.resetButton.disabled = !currentFile && !outputUrl;
+        };
+
+        elements.videoInput.addEventListener("change", (event) => {
+            const [file] = event.target.files;
+            currentFile = file || null;
+            resetOutput();
+            if (currentFile) {
+                const baseName = currentFile.name.replace(/\.[^/.]+$/, "");
+                elements.outputName.value = baseName || "converted";
+                setStatus("準備OK。設定を確認して変換してください。");
+            } else {
+                setStatus("ファイルを選択してください。");
+            }
+            updateButtons();
+        });
+
+        elements.resetButton.addEventListener("click", () => {
+            elements.videoInput.value = "";
+            currentFile = null;
+            resetOutput();
+            setStatus("ファイルを選択してください。");
+            updateButtons();
+        });
+
+        elements.convertButton.addEventListener("click", async () => {
+            if (!currentFile) {
+                return;
+            }
+            resetOutput();
+            updateButtons();
+
+            const start = Number.parseFloat(elements.startTime.value) || 0;
+            const duration = Number.parseFloat(elements.duration.value) || 1;
+            const width = Number.parseInt(elements.width.value, 10) || 480;
+            const fps = Number.parseInt(elements.fps.value, 10) || 12;
+            const safeName = elements.outputName.value.trim() || "converted";
+            const inputName = "input.mp4";
+            const outputName = `${safeName}.gif`;
+
+            try {
+                if (!ffmpeg.isLoaded()) {
+                    setStatus("FFmpegを読み込み中...");
+                    await ffmpeg.load();
+                }
+                setStatus("動画を読み込み中...");
+                ffmpeg.FS("writeFile", inputName, await fetchFile(currentFile));
+
+                setStatus("GIFに変換中...");
+                await ffmpeg.run(
+                    "-ss",
+                    String(start),
+                    "-t",
+                    String(duration),
+                    "-i",
+                    inputName,
+                    "-vf",
+                    `fps=${fps},scale=${width}:-1:flags=lanczos`,
+                    "-gifflags",
+                    "+transdiff",
+                    "-y",
+                    outputName
+                );
+
+                const data = ffmpeg.FS("readFile", outputName);
+                const gifBlob = new Blob([data.buffer], { type: "image/gif" });
+                outputUrl = URL.createObjectURL(gifBlob);
+
+                elements.downloadLink.href = outputUrl;
+                elements.downloadLink.download = outputName;
+                elements.downloadLink.hidden = false;
+                elements.gifPreview.src = outputUrl;
+                elements.gifPreview.hidden = false;
+
+                setStatus("変換完了！ダウンロードリンクから保存できます。");
+            } catch (error) {
+                console.error(error);
+                setStatus("変換に失敗しました。動画の長さやサイズを小さくして再試行してください。", true);
+            } finally {
+                updateButtons();
+            }
+        });
+    </script>
+</body>
+</html>
