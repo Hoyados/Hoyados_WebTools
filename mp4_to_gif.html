@@ -57,6 +57,24 @@
             gap: 8px;
             margin-bottom: 20px;
         }
+        .back-link {
+            justify-self: start;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+            padding: 8px 18px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
         h1 {
             font-size: 1.8rem;
             margin: 0;
@@ -154,11 +172,20 @@
             font-size: 0.8rem;
             color: var(--muted);
         }
+        @media (max-width: 640px) {
+            body {
+                padding: 24px 12px;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
+            <a class="back-link" href="index.html">← インデックスへ戻る</a>
             <h1>MP4 → GIF 変換ツール</h1>
             <p class="subtitle">ブラウザ内で変換します。動画はアップロードされません。</p>
         </header>
