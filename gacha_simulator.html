@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ガチャシミュレータ</title>
+    <style>
+        :root {
+            --bg: #0c1224;
+            --panel: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.12);
+            --text: #ecf1ff;
+            --muted: #bac4e6;
+            --accent: #42d8ff;
+            --accent-2: #9f7bff;
+            --ok: #58ffb2;
+            --warn: #ffd580;
+            --danger: #ff9fb0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(66, 216, 255, 0.18), transparent 40%),
+                radial-gradient(circle at 90% 0%, rgba(159, 123, 255, 0.16), transparent 45%),
+                var(--bg);
+            color: var(--text);
+            font-family: "Segoe UI", "Noto Sans JP", "Hiragino Sans", sans-serif;
+            line-height: 1.5;
+            padding: 28px 16px;
+        }
+
+        .page {
+            width: min(980px, 100%);
+            margin: 0 auto;
+            display: grid;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 18px 40px rgba(3, 7, 20, 0.35);
+            backdrop-filter: blur(6px);
+        }
+
+        h1, h2 {
+            margin: 0 0 12px;
+            line-height: 1.25;
+        }
+
+        h1 {
+            font-size: clamp(1.4rem, 2vw, 1.8rem);
+        }
+
+        p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.92rem;
+            color: var(--muted);
+        }
+
+        input,
+        select,
+        button {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(8, 15, 35, 0.72);
+            color: var(--text);
+            padding: 10px 12px;
+            font-size: 0.98rem;
+        }
+
+        input:focus,
+        select:focus,
+        button:focus {
+            outline: 2px solid rgba(66, 216, 255, 0.5);
+            outline-offset: 1px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 700;
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            color: #081221;
+            border: none;
+            transition: transform 0.16s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .muted-button {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 0.92rem;
+            min-height: 1.4em;
+        }
+
+        .status.ok { color: var(--ok); }
+        .status.warn { color: var(--warn); }
+        .status.danger { color: var(--danger); }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .stat {
+            background: var(--panel-strong);
+            border-radius: 12px;
+            padding: 10px;
+        }
+
+        .stat .k {
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+
+        .stat .v {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .bars {
+            margin-top: 10px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .bar-row {
+            display: grid;
+            grid-template-columns: 72px 1fr 80px;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.92rem;
+        }
+
+        .track {
+            height: 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+        }
+
+        .fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            width: 0;
+            transition: width 0.22s ease;
+        }
+
+        .history {
+            margin-top: 8px;
+            max-height: 200px;
+            overflow: auto;
+            display: grid;
+            gap: 8px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .footer-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        @media (max-width: 760px) {
+            .grid,
+            .actions,
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bar-row {
+                grid-template-columns: 64px 1fr 68px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="panel">
+            <h1>ガチャシミュレータ（欲望クールダウン版）</h1>
+            <p>
+                確率を入力して、まずは仮想で回しましょう。<br>
+                現実で引く前に「何連でどれくらい当たらないか」を見て冷静になるためのツールです。
+            </p>
+        </section>
+
+        <section class="panel">
+            <h2>設定</h2>
+            <div class="grid">
+                <div class="field">
+                    <label for="pickupRate">ピックアップ率（% / 1回あたり）</label>
+                    <input id="pickupRate" type="number" value="0.7" min="0" max="100" step="0.01">
+                </div>
+                <div class="field">
+                    <label for="ssrRate">SSR率（%）</label>
+                    <input id="ssrRate" type="number" value="3" min="0" max="100" step="0.01">
+                </div>
+                <div class="field">
+                    <label for="srRate">SR率（%）</label>
+                    <input id="srRate" type="number" value="18" min="0" max="100" step="0.01">
+                </div>
+                <div class="field">
+                    <label for="rRate">R率（%）</label>
+                    <input id="rRate" type="number" value="79" min="0" max="100" step="0.01">
+                </div>
+                <div class="field">
+                    <label for="pullCount">回す回数</label>
+                    <select id="pullCount">
+                        <option value="10">10連</option>
+                        <option value="30">30連</option>
+                        <option value="50">50連</option>
+                        <option value="100" selected>100連</option>
+                        <option value="300">300連（天井想定）</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="costPerPull">1回あたりの想定コスト（円）</label>
+                    <input id="costPerPull" type="number" value="300" min="0" step="1">
+                </div>
+            </div>
+            <div class="actions">
+                <button id="simulateBtn">シミュレーションする</button>
+                <button id="resetBtn" class="muted-button">履歴をリセット</button>
+            </div>
+            <div id="status" class="status"></div>
+        </section>
+
+        <section class="panel">
+            <h2>結果</h2>
+            <div class="result-grid">
+                <div class="stat"><div class="k">総回数</div><div class="v" id="totalPulls">-</div></div>
+                <div class="stat"><div class="k">ピックアップ排出</div><div class="v" id="pickupHits">-</div></div>
+                <div class="stat"><div class="k">SSR / SR / R</div><div class="v" id="rarityHits">-</div></div>
+                <div class="stat"><div class="k">想定消費</div><div class="v" id="spent">-</div></div>
+            </div>
+            <div class="bars">
+                <div class="bar-row"><span>Pickup</span><div class="track"><div id="barPickup" class="fill"></div></div><span id="barPickupText">0%</span></div>
+                <div class="bar-row"><span>SSR</span><div class="track"><div id="barSSR" class="fill"></div></div><span id="barSSRText">0%</span></div>
+                <div class="bar-row"><span>SR</span><div class="track"><div id="barSR" class="fill"></div></div><span id="barSRText">0%</span></div>
+                <div class="bar-row"><span>R</span><div class="track"><div id="barR" class="fill"></div></div><span id="barRText">0%</span></div>
+            </div>
+            <p id="cooldownText" style="margin-top:12px;"></p>
+        </section>
+
+        <section class="panel">
+            <h2>履歴（直近10件）</h2>
+            <div id="history" class="history"></div>
+            <p style="margin-top: 10px;">トップに戻る: <a class="footer-link" href="index.html">ツール一覧</a></p>
+        </section>
+    </main>
+
+    <script>
+        const elems = {
+            pickupRate: document.getElementById('pickupRate'),
+            ssrRate: document.getElementById('ssrRate'),
+            srRate: document.getElementById('srRate'),
+            rRate: document.getElementById('rRate'),
+            pullCount: document.getElementById('pullCount'),
+            costPerPull: document.getElementById('costPerPull'),
+            status: document.getElementById('status'),
+            totalPulls: document.getElementById('totalPulls'),
+            pickupHits: document.getElementById('pickupHits'),
+            rarityHits: document.getElementById('rarityHits'),
+            spent: document.getElementById('spent'),
+            barPickup: document.getElementById('barPickup'),
+            barSSR: document.getElementById('barSSR'),
+            barSR: document.getElementById('barSR'),
+            barR: document.getElementById('barR'),
+            barPickupText: document.getElementById('barPickupText'),
+            barSSRText: document.getElementById('barSSRText'),
+            barSRText: document.getElementById('barSRText'),
+            barRText: document.getElementById('barRText'),
+            cooldownText: document.getElementById('cooldownText'),
+            history: document.getElementById('history')
+        };
+
+        const historyItems = [];
+
+        function toNumber(input) {
+            const value = Number(input.value);
+            return Number.isFinite(value) ? value : NaN;
+        }
+
+        function setStatus(msg, cls) {
+            elems.status.textContent = msg;
+            elems.status.className = `status ${cls || ''}`.trim();
+        }
+
+        function validateRates(pickup, ssr, sr, r) {
+            const sum = ssr + sr + r;
+            if ([pickup, ssr, sr, r].some((n) => n < 0 || n > 100 || Number.isNaN(n))) {
+                return { ok: false, message: '確率は0〜100の範囲で入力してください。', level: 'danger' };
+            }
+            if (Math.abs(sum - 100) > 0.0001) {
+                return { ok: false, message: `SSR+SR+Rの合計を100%にしてください（現在 ${sum.toFixed(2)}%）。`, level: 'warn' };
+            }
+            if (pickup > ssr) {
+                return { ok: false, message: 'ピックアップ率はSSR率以下にしてください。', level: 'warn' };
+            }
+            return { ok: true, message: '設定OK。現実で回す前に、まずシミュレーション！', level: 'ok' };
+        }
+
+        function drawBar(el, textEl, value) {
+            const p = Math.max(0, Math.min(value, 100));
+            el.style.width = `${p}%`;
+            textEl.textContent = `${p.toFixed(2)}%`;
+        }
+
+        function formatYen(value) {
+            return `${Math.round(value).toLocaleString('ja-JP')}円`;
+        }
+
+        function simulate() {
+            const pickup = toNumber(elems.pickupRate);
+            const ssr = toNumber(elems.ssrRate);
+            const sr = toNumber(elems.srRate);
+            const r = toNumber(elems.rRate);
+            const pulls = Math.max(1, Math.floor(Number(elems.pullCount.value)));
+            const cost = Math.max(0, toNumber(elems.costPerPull));
+
+            const validation = validateRates(pickup, ssr, sr, r);
+            setStatus(validation.message, validation.level);
+            if (!validation.ok) {
+                return;
+            }
+
+            let pickupHits = 0;
+            let ssrHits = 0;
+            let srHits = 0;
+            let rHits = 0;
+
+            for (let i = 0; i < pulls; i += 1) {
+                const roll = Math.random() * 100;
+                if (roll < pickup) {
+                    pickupHits += 1;
+                    ssrHits += 1;
+                } else if (roll < ssr) {
+                    ssrHits += 1;
+                } else if (roll < ssr + sr) {
+                    srHits += 1;
+                } else {
+                    rHits += 1;
+                }
+            }
+
+            const pickupPercent = (pickupHits / pulls) * 100;
+            const ssrPercent = (ssrHits / pulls) * 100;
+            const srPercent = (srHits / pulls) * 100;
+            const rPercent = (rHits / pulls) * 100;
+
+            elems.totalPulls.textContent = `${pulls.toLocaleString('ja-JP')}連`;
+            elems.pickupHits.textContent = `${pickupHits}枚`;
+            elems.rarityHits.textContent = `${ssrHits} / ${srHits} / ${rHits}`;
+            elems.spent.textContent = formatYen(pulls * cost);
+
+            drawBar(elems.barPickup, elems.barPickupText, pickupPercent);
+            drawBar(elems.barSSR, elems.barSSRText, ssrPercent);
+            drawBar(elems.barSR, elems.barSRText, srPercent);
+            drawBar(elems.barR, elems.barRText, rPercent);
+
+            const noPickupChance = Math.pow(1 - pickup / 100, pulls) * 100;
+            elems.cooldownText.textContent = `今回ピックアップ0枚の確率は理論上 約${noPickupChance.toFixed(2)}%。つまり、外れる時は普通に外れます。深呼吸して財布を守りましょう。`;
+
+            const item = {
+                date: new Date().toLocaleString('ja-JP'),
+                pulls,
+                pickupHits,
+                spent: pulls * cost
+            };
+            historyItems.unshift(item);
+            if (historyItems.length > 10) {
+                historyItems.length = 10;
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            elems.history.innerHTML = '';
+            if (historyItems.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'history-item';
+                empty.textContent = 'まだ履歴はありません。';
+                elems.history.appendChild(empty);
+                return;
+            }
+            historyItems.forEach((item) => {
+                const row = document.createElement('div');
+                row.className = 'history-item';
+                row.textContent = `${item.date} / ${item.pulls}連 / pickup ${item.pickupHits}枚 / ${formatYen(item.spent)}`;
+                elems.history.appendChild(row);
+            });
+        }
+
+        document.getElementById('simulateBtn').addEventListener('click', simulate);
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            historyItems.length = 0;
+            renderHistory();
+            setStatus('履歴をリセットしました。', 'ok');
+        });
+
+        renderHistory();
+        const initial = validateRates(
+            toNumber(elems.pickupRate),
+            toNumber(elems.ssrRate),
+            toNumber(elems.srRate),
+            toNumber(elems.rRate)
+        );
+        setStatus(initial.message, initial.level);
+    </script>
+</body>
+</html>
