@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ベイズ成功確率推定ツール | Hoyados Web Tools</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: rgba(255, 255, 255, 0.8);
+      --panel-strong: #ffffff;
+      --text: #16223d;
+      --muted: #5c6783;
+      --accent: #4f7cff;
+      --accent-2: #7b5cff;
+      --outline: rgba(103, 124, 184, 0.2);
+      --shadow: 0 30px 80px rgba(29, 48, 94, 0.14);
+      --error: #c0392b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", "Segoe UI", "Noto Sans JP", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(79, 124, 255, 0.24), transparent 40%),
+        radial-gradient(circle at 85% 10%, rgba(123, 92, 255, 0.2), transparent 36%),
+        linear-gradient(180deg, #f8faff 0%, #edf1fa 100%);
+      padding: 28px 14px;
+    }
+
+    .shell {
+      width: min(1160px, 100%);
+      margin: 0 auto;
+      border-radius: 24px;
+      border: 1px solid var(--outline);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 28px;
+      background: linear-gradient(130deg, rgba(79, 124, 255, 0.12), rgba(123, 92, 255, 0.08), rgba(255, 255, 255, 0.45));
+      border-bottom: 1px solid rgba(103, 124, 184, 0.16);
+    }
+
+    .meta {
+      display: inline-block;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--accent);
+      background: rgba(79, 124, 255, 0.14);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.55rem, 3.2vw, 2.2rem);
+    }
+
+    .lead {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 74ch;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 14px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .panel {
+      background: var(--panel-strong);
+      border: 1px solid rgba(108, 129, 189, 0.25);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 1.08rem;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid rgba(108, 129, 189, 0.35);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .sample-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .sample-buttons button {
+      border: 1px solid rgba(79, 124, 255, 0.3);
+      background: rgba(79, 124, 255, 0.08);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 0.86rem;
+      cursor: pointer;
+    }
+
+    .sample-buttons button:hover {
+      background: rgba(79, 124, 255, 0.16);
+    }
+
+    .error {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      color: var(--error);
+      background: rgba(192, 57, 43, 0.08);
+      border: 1px solid rgba(192, 57, 43, 0.18);
+      display: none;
+    }
+
+    .explain {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.93rem;
+      line-height: 1.65;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric {
+      border: 1px solid rgba(108, 129, 189, 0.2);
+      border-radius: 12px;
+      padding: 11px;
+      background: #fff;
+    }
+
+    .metric-title {
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin-bottom: 5px;
+    }
+
+    .metric-value {
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .chart-wrap {
+      border: 1px solid rgba(108, 129, 189, 0.2);
+      border-radius: 12px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    canvas {
+      width: 100%;
+      height: 300px;
+      display: block;
+    }
+
+    .legend {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      color: #7380a0;
+      font-size: 0.83rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 930px) {
+      .layout { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: 1fr; }
+      canvas { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div class="meta">Bayesian Tool</div>
+      <h1>ベイズ成功確率推定ツール</h1>
+      <p class="lead">「成功回数」と「試行回数」から、真の成功確率 <strong>p</strong> の候補を推定します。試行が少ないほど分布が広がり、不確実性が大きいことを視覚的に確認できます。</p>
+      <a class="back-link" href="index.html">← ツール一覧へ戻る</a>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>入力</h2>
+        <div class="form-grid">
+          <label>
+            成功回数
+            <input id="successes" type="number" min="0" step="1" value="50" inputmode="numeric">
+          </label>
+          <label>
+            試行回数
+            <input id="trials" type="number" min="1" step="1" value="100" inputmode="numeric">
+          </label>
+          <label>
+            信用区間レベル
+            <select id="credibility">
+              <option value="0.90">90%</option>
+              <option value="0.95" selected>95%</option>
+              <option value="0.99">99%</option>
+            </select>
+          </label>
+          <div>
+            <div style="font-size:0.9rem;color:var(--muted);margin-bottom:6px;">サンプル</div>
+            <div class="sample-buttons">
+              <button type="button" data-s="1" data-t="1">1 / 1</button>
+              <button type="button" data-s="0" data-t="10">0 / 10</button>
+              <button type="button" data-s="50" data-t="100">50 / 100</button>
+              <button type="button" data-s="7" data-t="20">7 / 20</button>
+            </div>
+          </div>
+        </div>
+        <div id="error" class="error" role="alert"></div>
+      </section>
+
+      <section class="panel">
+        <h2>推定結果</h2>
+        <p class="explain">このツールでは、事前分布に Beta(1,1) を使い、観測後の分布（事後分布）を表示しています。山が高い場所ほど「その確率らしい」度合いが高く、色付き区間が選択した信用区間です。</p>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="metric-title">観測比率</div><div class="metric-value" id="observed"></div></div>
+          <div class="metric"><div class="metric-title">事後平均</div><div class="metric-value" id="mean"></div></div>
+          <div class="metric"><div class="metric-title">事後中央値</div><div class="metric-value" id="median"></div></div>
+          <div class="metric"><div class="metric-title">最頻値（モード）</div><div class="metric-value" id="mode"></div></div>
+          <div class="metric" style="grid-column: 1 / -1;"><div class="metric-title">信用区間</div><div class="metric-value" id="interval"></div></div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="posteriorChart" aria-label="事後分布グラフ"></canvas>
+          <div class="legend">
+            <span><span class="dot" style="background:#4f7cff"></span>事後分布 Beta(成功+1, 失敗+1)</span>
+            <span><span class="dot" style="background:#9db6ff"></span>信用区間</span>
+            <span><span class="dot" style="background:#ff7a59"></span>事後平均</span>
+            <span><span class="dot" style="background:#00a884"></span>事後中央値</span>
+          </div>
+        </div>
+
+        <div class="footer-note">表示形式は「0〜1」と「%」を併記しています。数式を使わなくても、区間の幅と分布の形で不確実性を直感的に比較できます。</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Beta関数関連: 依存を増やさないため、必要な数値計算を純粋なJavaScriptで実装。
+    const LANCZOS_COEFFS = [
+      676.5203681218851,
+      -1259.1392167224028,
+      771.32342877765313,
+      -176.61502916214059,
+      12.507343278686905,
+      -0.13857109526572012,
+      9.9843695780195716e-6,
+      1.5056327351493116e-7
+    ];
+
+    function logGamma(z) {
+      if (z < 0.5) {
+        return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * z)) - logGamma(1 - z);
+      }
+      z -= 1;
+      let x = 0.99999999999980993;
+      for (let i = 0; i < LANCZOS_COEFFS.length; i++) {
+        x += LANCZOS_COEFFS[i] / (z + i + 1);
+      }
+      const t = z + LANCZOS_COEFFS.length - 0.5;
+      return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+    }
+
+    function logBeta(a, b) {
+      return logGamma(a) + logGamma(b) - logGamma(a + b);
+    }
+
+    function betaPdf(x, a, b) {
+      if (x <= 0 || x >= 1) return 0;
+      return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logBeta(a, b));
+    }
+
+    function betacf(a, b, x) {
+      const MAX_ITER = 200;
+      const EPS = 3e-12;
+      const FPMIN = 1e-30;
+
+      let qab = a + b;
+      let qap = a + 1;
+      let qam = a - 1;
+      let c = 1;
+      let d = 1 - (qab * x) / qap;
+      if (Math.abs(d) < FPMIN) d = FPMIN;
+      d = 1 / d;
+      let h = d;
+
+      for (let m = 1; m <= MAX_ITER; m++) {
+        const m2 = 2 * m;
+        let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+        d = 1 + aa * d;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        c = 1 + aa / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+        d = 1 / d;
+        h *= d * c;
+
+        aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+        d = 1 + aa * d;
+        if (Math.abs(d) < FPMIN) d = FPMIN;
+        c = 1 + aa / c;
+        if (Math.abs(c) < FPMIN) c = FPMIN;
+        d = 1 / d;
+        const del = d * c;
+        h *= del;
+
+        if (Math.abs(del - 1) < EPS) break;
+      }
+      return h;
+    }
+
+    function betaCdf(x, a, b) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+
+      const bt = Math.exp(
+        logGamma(a + b) - logGamma(a) - logGamma(b) +
+        a * Math.log(x) + b * Math.log(1 - x)
+      );
+
+      if (x < (a + 1) / (a + b + 2)) {
+        return (bt * betacf(a, b, x)) / a;
+      }
+      return 1 - (bt * betacf(b, a, 1 - x)) / b;
+    }
+
+    function betaQuantile(p, a, b) {
+      if (p <= 0) return 0;
+      if (p >= 1) return 1;
+
+      let lo = 0;
+      let hi = 1;
+      for (let i = 0; i < 70; i++) {
+        const mid = (lo + hi) / 2;
+        const c = betaCdf(mid, a, b);
+        if (c < p) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+      return (lo + hi) / 2;
+    }
+
+    function formatPair(value) {
+      return `${value.toFixed(4)}（${(value * 100).toFixed(2)}%）`;
+    }
+
+    function validate(successes, trials) {
+      if (!Number.isInteger(trials) || trials <= 0) {
+        return "試行回数は 0 より大きい整数で入力してください。";
+      }
+      if (!Number.isInteger(successes) || successes < 0) {
+        return "成功回数は 0 以上の整数で入力してください。";
+      }
+      if (successes > trials) {
+        return "成功回数は試行回数以下にしてください。";
+      }
+      return "";
+    }
+
+    function drawPosterior(canvas, a, b, lower, upper, mean, median) {
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth;
+      const cssHeight = canvas.clientHeight;
+      canvas.width = Math.floor(cssWidth * dpr);
+      canvas.height = Math.floor(cssHeight * dpr);
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+      const padding = { left: 44, right: 20, top: 16, bottom: 30 };
+      const w = cssWidth - padding.left - padding.right;
+      const h = cssHeight - padding.top - padding.bottom;
+
+      const n = 320;
+      const xs = new Array(n);
+      const ys = new Array(n);
+      let maxY = 0;
+
+      for (let i = 0; i < n; i++) {
+        const x = i / (n - 1);
+        const y = betaPdf(Math.min(Math.max(x, 1e-6), 1 - 1e-6), a, b);
+        xs[i] = x;
+        ys[i] = y;
+        if (Number.isFinite(y)) maxY = Math.max(maxY, y);
+      }
+
+      if (maxY <= 0 || !Number.isFinite(maxY)) maxY = 1;
+
+      const xToPx = (x) => padding.left + x * w;
+      const yToPx = (y) => padding.top + h - (y / maxY) * h;
+
+      ctx.strokeStyle = "#d2dbee";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top + h);
+      ctx.lineTo(padding.left + w, padding.top + h);
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, padding.top + h);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(157, 182, 255, 0.34)";
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < n; i++) {
+        const x = xs[i];
+        if (x < lower || x > upper) continue;
+        const px = xToPx(x);
+        const py = yToPx(ys[i]);
+        if (!started) {
+          ctx.moveTo(px, yToPx(0));
+          ctx.lineTo(px, py);
+          started = true;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      if (started) {
+        ctx.lineTo(xToPx(upper), yToPx(0));
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = "#4f7cff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const px = xToPx(xs[i]);
+        const py = yToPx(ys[i]);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      function drawVLine(x, color) {
+        const px = xToPx(x);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(px, yToPx(0));
+        ctx.lineTo(px, padding.top);
+        ctx.stroke();
+      }
+
+      drawVLine(mean, "#ff7a59");
+      drawVLine(median, "#00a884");
+      drawVLine(lower, "#9db6ff");
+      drawVLine(upper, "#9db6ff");
+
+      ctx.fillStyle = "#7281a2";
+      ctx.font = "12px sans-serif";
+      ctx.fillText("0", xToPx(0) - 3, yToPx(0) + 16);
+      ctx.fillText("0.5", xToPx(0.5) - 10, yToPx(0) + 16);
+      ctx.fillText("1", xToPx(1) - 4, yToPx(0) + 16);
+    }
+
+    function recalculate() {
+      const successes = Number(document.getElementById("successes").value);
+      const trials = Number(document.getElementById("trials").value);
+      const credibility = Number(document.getElementById("credibility").value);
+      const errorBox = document.getElementById("error");
+
+      const error = validate(successes, trials);
+      if (error) {
+        errorBox.textContent = error;
+        errorBox.style.display = "block";
+        return;
+      }
+
+      errorBox.style.display = "none";
+
+      const failures = trials - successes;
+      const alpha = successes + 1;
+      const beta = failures + 1;
+      const observed = successes / trials;
+      const mean = alpha / (alpha + beta);
+      const median = betaQuantile(0.5, alpha, beta);
+
+      let modeText = "定義できません（端点側にピークが出る分布です）";
+      if (alpha > 1 && beta > 1) {
+        const mode = (alpha - 1) / (alpha + beta - 2);
+        modeText = formatPair(mode);
+      }
+
+      const tail = (1 - credibility) / 2;
+      const lower = betaQuantile(tail, alpha, beta);
+      const upper = betaQuantile(1 - tail, alpha, beta);
+
+      document.getElementById("observed").textContent = formatPair(observed);
+      document.getElementById("mean").textContent = formatPair(mean);
+      document.getElementById("median").textContent = formatPair(median);
+      document.getElementById("mode").textContent = modeText;
+      document.getElementById("interval").textContent = `${(credibility * 100).toFixed(0)}% 信用区間: ${formatPair(lower)} 〜 ${formatPair(upper)}`;
+
+      drawPosterior(document.getElementById("posteriorChart"), alpha, beta, lower, upper, mean, median);
+    }
+
+    document.querySelectorAll("#successes, #trials, #credibility").forEach((el) => {
+      el.addEventListener("input", recalculate);
+      el.addEventListener("change", recalculate);
+    });
+
+    document.querySelectorAll(".sample-buttons button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById("successes").value = button.dataset.s;
+        document.getElementById("trials").value = button.dataset.t;
+        recalculate();
+      });
+    });
+
+    window.addEventListener("resize", recalculate);
+    recalculate();
+  </script>
+</body>
+</html>

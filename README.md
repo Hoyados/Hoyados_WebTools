@@ -1,36 +1,32 @@
-# ベイズ成功確率推定ツール（GitHub Pages 対応）
+# Hoyados Web Tools
 
-「成功回数」と「試行回数」から、真の成功確率 `p` をベイズ推定する静的 Web サイトです。  
-サーバー不要で、GitHub Pages にそのまま配置して公開できます。
+GitHub Pages でそのまま公開できる、静的 HTML/CSS/JavaScript ツール集です。
+この更新では「ベイズ成功確率推定ツール」を追加しました。
 
-## 特徴
+## 追加ツール: ベイズ成功確率推定ツール
 
-- 単一ページ（`index.html`）で完結
-- 日本語 UI
-- レスポンシブ対応（PC / スマホ）
-- 入力変更時に即時再計算
-- 事後分布（Beta 分布）をグラフ表示
-- 観測比率・事後平均・事後中央値・最頻値・信用区間を表示
+ファイル: `bayes_success_estimator.html`
 
-## 推定モデル
+### できること
+- 成功回数・試行回数・信用区間レベル（90/95/99%）を入力
+- 事前分布 `Beta(1,1)` に基づくベイズ推定
+- 事後分布 `Beta(成功+1, 失敗+1)` を可視化
+- 以下を表示
+  - 観測比率
+  - 事後平均
+  - 事後中央値
+  - 最頻値（定義できないケースは説明表示）
+  - 指定した信用区間
+- 0〜1 表示と % 表示を併記
+- 入力変更時の即時再計算
+- サンプルボタン（1/1, 0/10, 50/100 など）
 
-- 事前分布: `Beta(1,1)`
-- 事後分布: `Beta(成功回数+1, 失敗回数+1)`
+## ローカル確認方法
 
-表示項目:
-
-- 観測比率（成功回数 / 試行回数）
-- 事後平均
-- 事後中央値
-- 最頻値（定義できない場合はその旨を表示）
-- 指定レベルの信用区間
-
-## ローカルでの確認方法
-
-### 方法1: 直接開く（最も簡単）
-
-1. リポジトリを clone
+### 方法1: ファイルを直接開く
+1. このリポジトリを clone
 2. `index.html` をブラウザで開く
+3. 一覧から「ベイズ成功確率推定ツール」を開く
 
 ### 方法2: ローカルサーバーで確認（任意）
 
@@ -38,31 +34,34 @@
 python3 -m http.server 8000
 ```
 
-ブラウザで `http://localhost:8000` を開いて確認します。
+ブラウザで `http://localhost:8000` を開きます。
 
 ## GitHub Pages 公開手順（初心者向け）
 
-1. GitHub にリポジトリを push する
+1. リポジトリを GitHub に push する
 2. GitHub のリポジトリ画面で **Settings** を開く
 3. 左メニューの **Pages** を開く
-4. **Build and deployment** の **Source** を `Deploy from a branch` にする
-5. **Branch** を `main`（または公開したいブランチ） / `/ (root)` にして **Save**
-6. 数分待つと、表示された URL で公開ページにアクセス可能
+4. **Source** を `Deploy from a branch` に設定
+5. **Branch** は `main`、フォルダは `/ (root)` を選んで **Save**
+6. 数分待つと公開 URL が表示されるのでアクセスする
 
-## ファイル構成
+## ディレクトリ構成
 
 ```text
 .
+├── .nojekyll
 ├── README.md
 ├── index.html
-├── ddr_flare_gauge.html
+├── bayes_success_estimator.html
 ├── csv_dashboard.html
+├── ddr_flare_gauge.html
 ├── gacha_simulator.html
-├── sorting_visualizer.html
-└── .nojekyll
+├── roulette.html
+└── sorting_visualizer.html
 ```
 
-## 実装メモ
+## 技術メモ
 
-- 数値計算は JavaScript のみで実装し、依存ライブラリは使っていません。
-- GitHub Pages での可搬性と、長期運用時のメンテナンス性を優先した構成です。
+- サーバー不要の静的構成です。
+- 数値計算は依存を増やさないため、JavaScript のみで実装しています。
+- GitHub Pages で clone 後すぐ動作する構成を意図しています。
