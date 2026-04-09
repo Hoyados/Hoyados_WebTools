@@ -1,41 +1,68 @@
-# Hoyados WebTools
+# ベイズ成功確率推定ツール（GitHub Pages 対応）
 
-## 概要
-本リポジトリは、ブラウザで利用できる小さなユーティリティをまとめた静的サイトです。現時点では以下のツールを含みます。
+「成功回数」と「試行回数」から、真の成功確率 `p` をベイズ推定する静的 Web サイトです。  
+サーバー不要で、GitHub Pages にそのまま配置して公開できます。
 
-- DDR flare gauge allowable checker (`ddr_flare_gauge.html`)
-- Sorting Visualizer (`sorting_visualizer.html`)
-- CSV 自動ダッシュボード (`csv_dashboard.html`)
-- ガチャシミュレータ (`gacha_simulator.html`)
+## 特徴
 
-## HTML ファイルの説明
-- `index.html`: ツール一覧への入口となるトップページです。
-- `ddr_flare_gauge.html`: DDR のフレアゲージ可否を確認する計算ツールです。
-- `sorting_visualizer.html`: ソートアルゴリズムの挙動を可視化するデモページです。
-- `csv_dashboard.html`: CSV を読み込んでヘッダに紐づくデータを可視化するダッシュボードです。
-- `gacha_simulator.html`: 排出確率を設定してガチャ結果をシミュレーションできるツールです。
+- 単一ページ（`index.html`）で完結
+- 日本語 UI
+- レスポンシブ対応（PC / スマホ）
+- 入力変更時に即時再計算
+- 事後分布（Beta 分布）をグラフ表示
+- 観測比率・事後平均・事後中央値・最頻値・信用区間を表示
 
-## 使い方
-1. このリポジトリをクローンまたはダウンロードします。
-2. 目的の HTML ファイルをブラウザで直接開きます。
-   - 例: `index.html`
+## 推定モデル
+
+- 事前分布: `Beta(1,1)`
+- 事後分布: `Beta(成功回数+1, 失敗回数+1)`
+
+表示項目:
+
+- 観測比率（成功回数 / 試行回数）
+- 事後平均
+- 事後中央値
+- 最頻値（定義できない場合はその旨を表示）
+- 指定レベルの信用区間
+
+## ローカルでの確認方法
+
+### 方法1: 直接開く（最も簡単）
+
+1. リポジトリを clone
+2. `index.html` をブラウザで開く
+
+### 方法2: ローカルサーバーで確認（任意）
+
+```bash
+python3 -m http.server 8000
+```
+
+ブラウザで `http://localhost:8000` を開いて確認します。
+
+## GitHub Pages 公開手順（初心者向け）
+
+1. GitHub にリポジトリを push する
+2. GitHub のリポジトリ画面で **Settings** を開く
+3. 左メニューの **Pages** を開く
+4. **Build and deployment** の **Source** を `Deploy from a branch` にする
+5. **Branch** を `main`（または公開したいブランチ） / `/ (root)` にして **Save**
+6. 数分待つと、表示された URL で公開ページにアクセス可能
 
 ## ファイル構成
-```
+
+```text
 .
 ├── README.md
 ├── index.html
 ├── ddr_flare_gauge.html
 ├── csv_dashboard.html
 ├── gacha_simulator.html
-└── sorting_visualizer.html
+├── sorting_visualizer.html
+└── .nojekyll
 ```
 
-## 開発について
-本リポジトリは静的 HTML を中心に構成されています。追加のツールやページを作成する場合は、HTML ファイルを作成し `index.html` からリンクしてください。
+## 実装メモ
 
-## ライセンス
-このプロジェクトは MIT License の下で公開されています。
-
-## 連絡先
-twitter: @hoyados
+- 数値計算は JavaScript のみで実装し、依存ライブラリは使っていません。
+- GitHub Pages での可搬性と、長期運用時のメンテナンス性を優先した構成です。
