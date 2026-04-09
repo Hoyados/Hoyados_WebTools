@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ルーレットメーカー</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f7ff;
+            --panel: #ffffff;
+            --text: #16223d;
+            --muted: #5c6783;
+            --accent: #4f7cff;
+            --outline: rgba(103, 124, 184, 0.22);
+            --shadow: 0 24px 50px rgba(25, 41, 80, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Inter", "Segoe UI", "Noto Sans JP", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 14% 10%, rgba(79, 124, 255, 0.2), transparent 42%),
+                radial-gradient(circle at 84% 18%, rgba(123, 92, 255, 0.18), transparent 34%),
+                linear-gradient(180deg, #f8faff 0%, #e9eefb 100%);
+            padding: 26px 14px;
+        }
+
+        .shell {
+            width: min(1040px, 100%);
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid var(--outline);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            padding: clamp(16px, 4vw, 30px);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4vw, 2.2rem); }
+        .lead { margin: 0 0 20px; color: var(--muted); }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(260px, 360px) 1fr;
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--outline);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 220px;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 123, 193, 0.3);
+            padding: 12px;
+            font: inherit;
+            resize: vertical;
+        }
+
+        .controls { margin-top: 12px; display: grid; gap: 10px; }
+
+        .btn {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 16px;
+            font: inherit;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #4f7cff, #7b5cff);
+            cursor: pointer;
+        }
+
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .sub {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .wheel-wrap {
+            position: relative;
+            width: min(500px, 100%);
+            margin: 0 auto;
+            display: grid;
+            place-items: center;
+            padding-top: 22px;
+        }
+
+        .pointer {
+            position: absolute;
+            top: 0;
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-top: 26px solid #e64c6a;
+            z-index: 3;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            box-shadow: 0 18px 34px rgba(41, 62, 115, 0.2);
+            background: #fff;
+        }
+
+        .result {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .result span { color: var(--accent); }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            textarea { min-height: 180px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <h1>ルーレットメーカー</h1>
+        <p class="lead">候補を改行区切りで入力して、ルーレットを回せます。</p>
+        <section class="layout">
+            <div class="card">
+                <label for="items"><strong>候補リスト</strong></label>
+                <textarea id="items">焼肉
+ラーメン
+寿司
+カレー
+ハンバーガー
+そば</textarea>
+                <div class="controls">
+                    <button id="spinButton" class="btn">回す</button>
+                    <button id="shuffleButton" class="btn" type="button">候補をシャッフル</button>
+                </div>
+                <p class="sub">※空行は無視されます。候補は最低2つ必要です。</p>
+            </div>
+
+            <div class="card">
+                <div class="wheel-wrap">
+                    <div class="pointer" aria-hidden="true"></div>
+                    <canvas id="wheel" width="600" height="600"></canvas>
+                </div>
+                <div class="result" id="result">結果: <span>-</span></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const itemsInput = document.getElementById('items');
+        const spinButton = document.getElementById('spinButton');
+        const shuffleButton = document.getElementById('shuffleButton');
+        const resultLabel = document.getElementById('result').querySelector('span');
+
+        const colors = ['#4f7cff', '#7b5cff', '#2baea8', '#f29f05', '#e85d75', '#20a255', '#8b6cf2', '#e07a2d'];
+        let rotation = 0;
+        let spinning = false;
+
+        function getItems() {
+            return itemsInput.value
+                .split('\n')
+                .map(v => v.trim())
+                .filter(Boolean);
+        }
+
+        function drawWheel() {
+            const items = getItems();
+            const count = Math.max(items.length, 1);
+            const center = canvas.width / 2;
+            const radius = center - 12;
+            const angleStep = (Math.PI * 2) / count;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(center, center);
+            ctx.rotate(rotation);
+
+            for (let i = 0; i < count; i++) {
+                const start = i * angleStep;
+                const end = start + angleStep;
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, start, end);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+
+                ctx.save();
+                ctx.rotate(start + angleStep / 2);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 24px "Noto Sans JP", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+
+                const label = items[i] || '候補を入力';
+                const max = 12;
+                const text = label.length > max ? `${label.slice(0, max)}…` : label;
+                ctx.fillText(text, radius - 24, 0);
+                ctx.restore();
+            }
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 42, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(79, 124, 255, 0.45)';
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function spin() {
+            const items = getItems();
+            if (items.length < 2 || spinning) {
+                if (items.length < 2) {
+                    resultLabel.textContent = '候補を2つ以上入力してください';
+                }
+                return;
+            }
+
+            spinning = true;
+            spinButton.disabled = true;
+            shuffleButton.disabled = true;
+            resultLabel.textContent = '回転中...';
+
+            const count = items.length;
+            const segment = (Math.PI * 2) / count;
+            const winnerIndex = Math.floor(Math.random() * count);
+            const baseTarget = -Math.PI / 2 - (winnerIndex + 0.5) * segment;
+            const spins = (Math.PI * 2) * (5 + Math.random() * 2);
+            const target = baseTarget - spins;
+            const start = rotation;
+            const duration = 3600;
+            const startAt = performance.now();
+
+            function animate(now) {
+                const t = Math.min((now - startAt) / duration, 1);
+                const ease = 1 - Math.pow(1 - t, 3);
+                rotation = start + (target - start) * ease;
+                drawWheel();
+
+                if (t < 1) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+
+                rotation = ((target % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+                drawWheel();
+                resultLabel.textContent = items[winnerIndex];
+                spinning = false;
+                spinButton.disabled = false;
+                shuffleButton.disabled = false;
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function shuffleItems() {
+            const items = getItems();
+            for (let i = items.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [items[i], items[j]] = [items[j], items[i]];
+            }
+            itemsInput.value = items.join('\n');
+            drawWheel();
+        }
+
+        itemsInput.addEventListener('input', drawWheel);
+        spinButton.addEventListener('click', spin);
+        shuffleButton.addEventListener('click', shuffleItems);
+
+        drawWheel();
+    </script>
+</body>
+</html>
