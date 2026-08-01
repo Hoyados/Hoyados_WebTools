@@ -1,9 +1,25 @@
 # Hoyados Web Tools
 
 GitHub Pages でそのまま公開できる、静的 HTML/CSS/JavaScript ツール集です。
-この更新では「ベイズ成功確率推定ツール」を追加しました。
+インストールやユーザー登録は不要で、各ツールの処理はブラウザ上で完結します。
 
-## 追加ツール: ベイズ成功確率推定ツール
+## デザインシステム
+
+- `site.css` にカラー、タイポグラフィ、レスポンシブレイアウトを集約
+- `site.js` で全ツール共通のナビゲーションと、保存可能なライト／ダークテーマを提供
+- キーボードフォーカス、スキップリンク、`prefers-reduced-motion` に対応
+- トップページは目的を見つけやすい Bento グリッド形式のツールディレクトリ
+
+## 収録ツール
+
+- CSV 自動ダッシュボード
+- ソートアルゴリズム可視化ツール
+- ベイズ成功確率推定ツール
+- DDR フレアゲージ計算機
+- ガチャシミュレータ
+- ルーレットメーカー
+
+### ベイズ成功確率推定ツール
 
 ファイル: `bayes_success_estimator.html`
 
@@ -57,7 +73,9 @@ python3 -m http.server 8000
 ├── ddr_flare_gauge.html
 ├── gacha_simulator.html
 ├── roulette.html
-└── sorting_visualizer.html
+├── sorting_visualizer.html
+├── site.css
+└── site.js
 ```
 
 ## 技術メモ
