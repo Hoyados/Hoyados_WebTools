@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ブラウザを静かな画面で満たして、5〜20分だけ情報から離れるためのチルスクリーン。">
+  <title>Chill Screen — Hoyados Tools</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.56);
+      --panel: rgba(255,255,255,.08);
+      --line: rgba(255,255,255,.14);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 25% 20%, rgba(91,116,153,.18), transparent 34%),
+        radial-gradient(circle at 75% 80%, rgba(73,102,119,.15), transparent 36%),
+        linear-gradient(160deg, #101722, #17202d 55%, #0c121b);
+    }
+    button, a { font: inherit; }
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(18px, 3vw, 34px);
+    }
+    .topbar, .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .08em;
+    }
+    .back {
+      color: inherit;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: rgba(255,255,255,.03);
+    }
+    .back:hover, .back:focus-visible { color: var(--text); outline: none; border-color: rgba(255,255,255,.32); }
+    main {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 28px 0;
+    }
+    .content { width: min(680px, 92vw); }
+    .orb-wrap {
+      height: 240px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 16px;
+    }
+    .orb {
+      width: 172px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.24), rgba(166,195,215,.12) 48%, rgba(255,255,255,.05));
+      box-shadow: 0 0 90px rgba(180,208,225,.13), inset 0 0 42px rgba(255,255,255,.06);
+      animation: breathe 8s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(.76); opacity: .46; }
+      50% { transform: scale(1.16); opacity: .94; }
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(54px, 10vw, 88px);
+      font-weight: 550;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+    }
+    .message {
+      margin: 14px 0 28px;
+      color: var(--muted);
+      font-size: clamp(16px, 2.6vw, 20px);
+    }
+    .durations, .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .durations { margin-bottom: 12px; }
+    button {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+    button:hover, button:focus-visible { outline: none; border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.12); }
+    .duration.active {
+      background: rgba(255,255,255,.17);
+      border-color: rgba(255,255,255,.4);
+    }
+    .primary {
+      padding: 12px 20px;
+      background: rgba(229,240,246,.16);
+    }
+    .hint {
+      margin-top: 18px;
+      color: rgba(255,255,255,.36);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    @media (max-width: 560px) {
+      .topbar span { display: none; }
+      .orb-wrap { height: 200px; }
+      .orb { width: 146px; }
+      .footer { justify-content: center; }
+      .footer span:last-child { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .orb { animation: none; transform: scale(.92); opacity: .72; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="back" href="index.html">← HOYADOS TOOLS</a>
+      <span>CHILL SCREEN · NO INPUT REQUIRED</span>
+    </header>
+
+    <main>
+      <section class="content" aria-labelledby="timer">
+        <div class="orb-wrap" aria-hidden="true"><div class="orb"></div></div>
+        <h1 id="timer">10:00</h1>
+        <p class="message" id="message">いまは何も見なくていい</p>
+
+        <div class="durations" aria-label="休憩時間">
+          <button class="duration" type="button" data-minutes="5">5分</button>
+          <button class="duration active" type="button" data-minutes="10">10分</button>
+          <button class="duration" type="button" data-minutes="20">20分</button>
+        </div>
+        <div class="actions">
+          <button class="primary" id="start" type="button">全画面で休む</button>
+          <button id="reset" type="button">リセット</button>
+        </div>
+        <p class="hint">全画面はいつでも Esc で終了できます。ブラウザやOSの操作自体をロックする機能ではありません。</p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>HOYADOS TOOLS</span>
+      <span>情報を取りに行かない時間も、道具にする。</span>
+    </footer>
+  </div>
+
+  <script>
+    const timer = document.getElementById("timer");
+    const message = document.getElementById("message");
+    const startButton = document.getElementById("start");
+    const resetButton = document.getElementById("reset");
+    const durationButtons = [...document.querySelectorAll(".duration")];
+
+    let selectedMinutes = 10;
+    let remaining = selectedMinutes * 60;
+    let endAt = null;
+    let tickId = null;
+    let wakeLock = null;
+
+    function format(seconds) {
+      const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+      const s = String(seconds % 60).padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    function render() {
+      timer.textContent = format(Math.max(0, remaining));
+      document.title = `${timer.textContent} — Chill Screen`;
+    }
+
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator && document.visibilityState === "visible") {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (_) {}
+    }
+
+    async function enterFullscreen() {
+      try {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      } catch (_) {}
+    }
+
+    function stopTicker() {
+      if (tickId) clearInterval(tickId);
+      tickId = null;
+      endAt = null;
+    }
+
+    function finish() {
+      stopTicker();
+      remaining = 0;
+      render();
+      message.textContent = "おかえり。必要なら、もう少し。";
+      startButton.textContent = "もう一度休む";
+      if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+      }
+    }
+
+    function tick() {
+      if (!endAt) return;
+      remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+      render();
+      if (remaining <= 0) finish();
+    }
+
+    function reset() {
+      stopTicker();
+      remaining = selectedMinutes * 60;
+      render();
+      message.textContent = "いまは何も見なくていい";
+      startButton.textContent = "全画面で休む";
+    }
+
+    durationButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedMinutes = Number(button.dataset.minutes);
+        durationButtons.forEach((b) => b.classList.toggle("active", b === button));
+        reset();
+      });
+    });
+
+    startButton.addEventListener("click", async () => {
+      if (remaining <= 0) reset();
+      await enterFullscreen();
+      await requestWakeLock();
+      endAt = Date.now() + remaining * 1000;
+      if (tickId) clearInterval(tickId);
+      tickId = setInterval(tick, 250);
+      tick();
+      message.textContent = "吸って、吐いて。情報はあとで。";
+      startButton.textContent = "休憩中";
+    });
+
+    resetButton.addEventListener("click", reset);
+
+    document.addEventListener("visibilitychange", () => {
+      if (endAt) tick();
+      if (endAt && document.visibilityState === "visible" && !wakeLock) requestWakeLock();
+    });
+
+    render();
+  </script>
+</body>
+</html>
