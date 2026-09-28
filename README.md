@@ -18,6 +18,7 @@ GitHub Pages でそのまま公開できる、静的 HTML/CSS/JavaScript ツー�
 - DDR フレアゲージ計算機
 - ガチャシミュレータ
 - ルーレットメーカー
+- チルスクリーン
 
 ### ベイズ成功確率推定ツール
 
@@ -73,6 +74,7 @@ python3 -m http.server 8000
 ├── ddr_flare_gauge.html
 ├── gacha_simulator.html
 ├── roulette.html
+├── chill_screen.html
 ├── sorting_visualizer.html
 ├── site.css
 └── site.js
